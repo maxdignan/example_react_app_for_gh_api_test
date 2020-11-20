@@ -1,0 +1,11 @@
+.carousel {
+  @apply flex;
+  > li {
+    @apply bg-gray-300 rounded-full transition-all duration-1000 ease-out ml-2 mr-2;
+    width: 14px;
+    height: 14px;
+    &.is-active {
+      @apply bg-yellow pointer-events-none;
+    }
+  }
+}

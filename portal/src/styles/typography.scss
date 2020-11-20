@@ -1,0 +1,41 @@
+h1 {
+  @apply text-black font-bold text-5xl mb-8;
+}
+
+h2 {
+  @apply text-black font-medium text-3xl mb-6;
+}
+
+h3 {
+  @apply text-black text-2xl font-bold mb-5;
+}
+
+h4 {
+  @apply text-black text-xl font-medium mb-5;
+}
+
+h5 {
+  @apply text-black text-lg font-bold mb-5;
+}
+
+h6 {
+  @apply text-black text-lg;
+}
+
+.link {
+  @apply font-medium text-blue border-b-2 border-gray-200;
+  padding-bottom: 2px;
+  &:hover {
+    @apply text-black;
+  }
+  &:focus {
+    @apply outline-none;
+  }
+  &.border-0 {
+    @apply border-0;
+  }
+}
+
+.price {
+  @apply text-green text-3xl;
+}

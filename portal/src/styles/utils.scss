@@ -1,0 +1,17 @@
+.border-transparent {
+  border-color: transparent;
+}
+
+.placeholder {
+  ::placeholder {
+    color: theme('colors.red');
+  }
+}
+
+.border-l-1 {
+  border-left-width: 1px;
+}
+
+.shadow-b {
+  box-shadow: 0 1px 1px theme('colors.gray-200');
+}

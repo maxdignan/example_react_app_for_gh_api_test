@@ -1,0 +1,130 @@
+.form-group {
+  @apply mb-6;
+  &.center {
+    @apply flex justify-center;
+  }
+  label {
+    @apply text-sm text-gray-500 mb-3 font-medium placeholder flex;
+    &[for] {
+      @apply cursor-pointer;
+    }
+  }
+}
+
+/** @deprecated */
+.form-control {
+  @apply p-4 w-full border-gray-200 border-2 rounded text-black h-form-control;
+  &:focus {
+    @apply outline-none border-blue-gray;
+  }
+}
+
+@mixin floating-input-focus-label() {
+  transform: translate(6px, -4px) scale(0.75);
+}
+
+@mixin floating-input-focus-prefix() {
+  opacity: 1;
+  transform: translateY(-6px);
+}
+
+.select-menu {
+  @apply relative;
+  min-width: 200px;
+  &:after {
+    @apply absolute border-transparent;
+    content: '';
+    top: 50%;
+    right: 16px;
+    margin-top: -3px;
+    border-width: 6px;
+    border-top-color: theme('colors.blue-gray');
+  }
+  > select {
+    @apply w-full text-black relative border-2 rounded p-4 pt-5 border-gray-200 h-form-control bg-- appearance-none outline-none cursor-pointer;
+    &[disabled] {
+      @apply cursor-not-allowed border-gray-100;
+    }
+  }
+  .floating-label {
+    @apply absolute top-0 left-0 pointer-events-none;
+    &.is-active {
+      @include floating-input-focus-label();
+    }
+  }
+}
+
+.floating-label-group {
+  @apply relative overflow-hidden;
+
+  &.bg-white {
+    @apply bg--;
+  }
+
+  .floating-label,
+  .floating-label-input {
+    @apply w-full leading-none block;
+  }
+
+  .floating-label {
+    @apply absolute top-0 left-0 select-none p-4 uppercase text-xs text-gray-500 flex items-center origin-top-left font-semibold h-form-control;
+    letter-spacing: 1px;
+    will-change: contents;
+    transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1.6);
+    &.is-active {
+      @include floating-input-focus-label();
+    }
+  }
+
+  .floating-label-input {
+    @apply text-black relative border-2 rounded p-4 border-gray-200 h-form-control bg--;
+    padding-top: 1.7rem;
+    @at-root .floating-label-group.bg-white .floating-label-input {
+      @apply bg-white border-gray-300;
+    }
+    &::placeholder {
+      @apply text--;
+    }
+    &:focus,
+    &:not(:placeholder-shown) {
+      @apply outline-none shadow-none border-blue-gray;
+      + .floating-label {
+        @include floating-input-focus-label();
+      }
+    }
+    &.has-error {
+      @apply border-red;
+    }
+    /** @todo */
+    &[disabled] {
+      @apply cursor-not-allowed;
+    }
+  }
+
+  .floating-label-input-group {
+    .floating-label-input {
+      padding-left: 54px;
+      &:focus {
+        + .floating-label-input-prefix {
+          @include floating-input-focus-prefix();
+        }
+      }
+    }
+    .floating-label-input-prefix {
+      @apply absolute opacity-0 transition-all duration-200 ease-out;
+      top: 50%;
+      left: 20px;
+      transform: translateY(20px);
+      &.is-active {
+        @include floating-input-focus-prefix();
+      }
+    }
+  }
+}
+
+textarea {
+  @apply p-4 w-full border-gray-200 border-2 rounded text-black h-form-control;
+  &:focus {
+    @apply outline-none border-blue-gray;
+  }
+}

@@ -1,0 +1,31 @@
+<art-page-content>
+  <div class="mt-10">
+    <h2>
+      Visual Regression Dashboard
+    </h2>
+    <h6 class="mb-8">
+      Latest Builds
+    </h6>
+    <ng-container [ngSwitch]="vrStatus$ | async">
+      <ng-container *ngSwitchCase="statuses.Loading">
+        <art-loading-indicator></art-loading-indicator>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="statuses.Failure">
+        Failed to load dashboard.
+      </ng-container>
+
+      <ng-container *ngSwitchDefault>
+        <div class="mb-8" *ngFor="let build of vrBuilds$ | async">
+          <a class="inline-block" routerLink="/vr/{{ build.id }}">
+            <div>
+              <h4 class="m-0">{{ build.created | date: 'short' }}</h4>
+              <h6 class="m-0">{{ build.id }}</h6>
+            </div>
+            <div>{{ build.results.length }} snapshots</div>
+          </a>
+        </div>
+      </ng-container>
+    </ng-container>
+  </div>
+</art-page-content>

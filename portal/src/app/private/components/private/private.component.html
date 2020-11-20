@@ -1,0 +1,10 @@
+<art-app-nav
+  [user]="user$ | async"
+  [activeRoute]="activeRoute$ | async"
+  [apps]="apps$ | async"
+  [appContext]="appContext$ | async"
+></art-app-nav>
+
+<div class="min-h-screen pt-40 md:pt-20">
+  <router-outlet></router-outlet>
+</div>

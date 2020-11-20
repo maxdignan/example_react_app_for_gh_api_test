@@ -1,0 +1,18 @@
+:host {
+  .btn-link {
+    @apply pr-4;
+    &:hover {
+      @apply text-blue;
+    }
+    &.is-with-caret:after {
+      @apply absolute;
+      content: '';
+      top: 50%;
+      right: -4px;
+      margin-top: -2px;
+      border: 6px solid;
+      border-color: theme('colors.gray-500') transparent transparent
+        transparent;
+    }
+  }
+}

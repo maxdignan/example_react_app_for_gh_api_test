@@ -1,0 +1,39 @@
+.btn {
+  @apply bg-primary px-4 py-2 rounded text-white shadow-xl uppercase font-bold border-2 border-transparent inline-flex items-center text-sm select-none;
+  height: 60px;
+  &[disabled] {
+    @apply bg-gray-300 pointer-events-none cursor-not-allowed;
+  }
+  &:hover {
+    @apply bg-primary-light;
+  }
+  &:focus {
+    @apply outline-none border-primary;
+  }
+  &:active {
+    @apply outline-none bg-black text-primary shadow-none border-transparent;
+  }
+  &.btn-secondary {
+    @apply bg-black text-primary shadow-none;
+  }
+  &.btn-secondary-alt {
+    @apply bg-gray-500 text-white shadow-none;
+  }
+  // No background, border
+  &.btn-link {
+    @apply bg-- h-auto w-auto p-0 shadow-none normal-case text-yellow;
+    &.text-black {
+      @apply text-black;
+    }
+    &:hover {
+      @apply text-black;
+    }
+    &:focus {
+      @apply outline-none border-transparent;
+    }
+  }
+  // Tighter padding and height
+  &.btn-md {
+    @apply pt-3 pr-8 pb-3 pl-8 h-auto;
+  }
+}

@@ -1,0 +1,9 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import './styles/global.scss';
+/* purgecss start ignore */
+@import './styles/components/components.scss';
+/* purgecss end ignore */
+@import 'tailwindcss/utilities';
+@import './styles/utils.scss';
+@import './styles/typography.scss';
