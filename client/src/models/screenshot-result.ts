@@ -5,10 +5,11 @@ export interface ScreenshotResultMetrics {
 }
 
 interface ScreenshotResultInterface {
-  fileName: string;
   url: string;
-  pageTitle: string;
-  metrics: ScreenshotResultMetrics;
+  // fileName: string;
+  // Will be moved to plugins
+  // pageTitle: string;
+  // metrics: ScreenshotResultMetrics;
 }
 
 export type ScreenshotResult = Readonly<ScreenshotResultInterface>;

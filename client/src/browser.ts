@@ -32,12 +32,8 @@ export class Browser {
           const options = { bubbles: true, cancelable: true };
           el.dispatchEvent(new Event('focus', options));
           el.value = val;
-          el.dispatchEvent(new Event('keydown', options));
-          el.dispatchEvent(new Event('keypress', options));
-          el.dispatchEvent(new Event('keyup', options));
           el.dispatchEvent(new Event('input', options));
           el.dispatchEvent(new Event('change', options));
-          el.dispatchEvent(new Event('blur', options));
           return el.value;
         },
         config.login.user,
@@ -48,12 +44,8 @@ export class Browser {
           const options = { bubbles: true, cancelable: true };
           el.dispatchEvent(new Event('focus', options));
           el.value = val;
-          el.dispatchEvent(new Event('keydown', options));
-          el.dispatchEvent(new Event('keypress', options));
-          el.dispatchEvent(new Event('keyup', options));
           el.dispatchEvent(new Event('input', options));
           el.dispatchEvent(new Event('change', options));
-          el.dispatchEvent(new Event('blur', options));
           return el.value;
         },
         config.login.password,
@@ -155,7 +147,7 @@ export class Browser {
     const url = route.getFullUrl(serverUrl, config);
     const fileName = Route.getFileNameFromURL(serverUrl, url);
 
-    console.log(`browser : ${url}`);
+    console.log(`browser : visit : ${url}`);
 
     // Navigate to the route.
     await page.goto(url, { waitUntil: ['load'] });
@@ -177,7 +169,7 @@ export class Browser {
       }
     }
 
-    // Set screenshot dimensions
+    // Set viewport dimensions
     await page.setViewport({
       /** @todo: Configure this for each route? */
       width: 1400,
@@ -189,30 +181,44 @@ export class Browser {
 
     // console.log(`browser : saving screenshot as : ${fileName}`);
 
-    let pageTitle: string;
-    let metrics: ScreenshotResultMetrics;
+    // Original
+    // let pageTitle: string;
+    // let metrics: ScreenshotResultMetrics;
+    // try {
+    //   [, pageTitle, metrics] = await Promise.all([
+    //     await page.screenshot({
+    //       path: join(path, `${fileName}.png`),
+    //       fullPage: true,
+    //       type: 'png',
+    //     }),
+    //     await page.title(),
+    //     await this.parseMetrics(await page.metrics()),
+    //   ]);
+    // } catch (err) {
+    //   exitWithError(err);
+    // }
 
-    try {
-      [, pageTitle, metrics] = await Promise.all([
-        await page.screenshot({
-          path: join(path, `${fileName}.png`),
-          fullPage: true,
-          type: 'png',
-        }),
-        await page.title(),
-        await this.parseMetrics(await page.metrics()),
-      ]);
-    } catch (err) {
-      exitWithError(err);
-    }
+    // try {
+    //   [, pageTitle, metrics] = await Promise.all([
+    //     await page.screenshot({
+    //       path: join(path, `${fileName}.png`),
+    //       fullPage: true,
+    //       type: 'png',
+    //     }),
+    //     await page.title(),
+    //     await this.parseMetrics(await page.metrics()),
+    //   ]);
+    // } catch (err) {
+    //   exitWithError(err);
+    // }
 
     console.log('browser : visit done');
 
     const result: ScreenshotResult = {
-      fileName,
-      pageTitle,
-      metrics,
+      // fileName,
       url,
+      // pageTitle,
+      // metrics,
     };
 
     return result;
@@ -321,4 +327,8 @@ export class Browser {
     console.log('browser : done');
     return results;
   }
+
+  private initPlugins() {}
+
+  private runPlugins() {}
 }
