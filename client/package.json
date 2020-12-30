@@ -5,8 +5,8 @@
   "scripts": {
     "start": "npm run build-ts && npm run serve",
     "build": "rm -rf ./dist && npm run build-ts",
-    "serve:glassy": "node dist/app.js --url=http://localhost:4400 --dir=/Users/brad/h2/glassy --app=glassy",
-    "serve": "node dist/app.js --url=http://localhost:3000 --dir=/Users/brad/dev/art/examples/react --app=example-react",
+    "serve": "node dist/app.js --url=http://localhost:4400 --dir=/Users/brad/h2/glassy --app=glassy",
+    "serve:react": "node dist/app.js --url=http://localhost:3000 --dir=/Users/brad/dev/art/examples/react --app=example-react",
     "watch-node": "nodemon dist/server.js",
     "test": "jest --forceExit --coverage --verbose",
     "watch-test": "npm run test -- --watchAll",

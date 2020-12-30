@@ -52,7 +52,7 @@ class App {
    * Look for an ART project config file in the source directory.
    */
   private async readProjectConfig(projectUrl: string): Promise<ProjectConfig> {
-    const file = `${projectUrl}/art.config.js`;
+    const file = `${projectUrl}/emtrey.config.js`;
     let config: ProjectConfig;
     try {
       const fileContent = require(file);
@@ -164,15 +164,16 @@ class App {
     form.append('app', this.args.app);
     form.append('framework', framework);
 
-    results.forEach(async result => {
-      const fileName = `${path}/${result.fileName}.png`;
-      const stream = createReadStream(fileName);
-      form.append('files[]', stream);
-      form.append('fileNames[]', result.fileName);
-      form.append('pageTitles[]', result.pageTitle);
-      form.append('metrics[]', JSON.stringify(result.metrics));
-      form.append('urls[]', result.url);
-    });
+    // Disabled while plugins are under development
+    // results.forEach(async result => {
+    //   const fileName = `${path}/${result.fileName}.png`;
+    //   const stream = createReadStream(fileName);
+    //   form.append('files[]', stream);
+    //   form.append('fileNames[]', result.fileName);
+    //   form.append('pageTitles[]', result.pageTitle);
+    //   form.append('metrics[]', JSON.stringify(result.metrics));
+    //   form.append('urls[]', result.url);
+    // });
 
     console.log(
       'app : submitting results :',

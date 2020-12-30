@@ -1,13 +1,11 @@
-import { join } from 'path';
 import puppeteer, { LaunchOptions } from 'puppeteer';
 
 import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
-import {
-  ScreenshotResult,
-  ScreenshotResultMetrics,
-} from './models/screenshot-result';
+import { ScreenshotResult } from './models/screenshot-result';
 import { exitWithError } from './util';
+import { Plugin, PluginResult } from './models/plugin';
+import * as fromPlugins from './plugins';
 
 export class Browser {
   private authorized = false;
@@ -121,19 +119,6 @@ export class Browser {
   }
 
   /**
-   * Parse puppetter-native metrics into proprietary.
-   */
-  private async parseMetrics(
-    metrics: puppeteer.Metrics,
-  ): Promise<ScreenshotResultMetrics> {
-    return {
-      layout: metrics.LayoutDuration,
-      script: metrics.ScriptDuration,
-      heap: metrics.JSHeapTotalSize,
-    };
-  }
-
-  /**
    * Core logic to handle navigation and screenshots.
    */
   private async visitRoute(data: {
@@ -198,25 +183,19 @@ export class Browser {
     //   exitWithError(err);
     // }
 
-    // try {
-    //   [, pageTitle, metrics] = await Promise.all([
-    //     await page.screenshot({
-    //       path: join(path, `${fileName}.png`),
-    //       fullPage: true,
-    //       type: 'png',
-    //     }),
-    //     await page.title(),
-    //     await this.parseMetrics(await page.metrics()),
-    //   ]);
-    // } catch (err) {
-    //   exitWithError(err);
-    // }
+    let plugins: PluginResult<unknown>[] = [];
+
+    try {
+      plugins = await this.runPlugins(page);
+    } catch (err) {
+      exitWithError(err);
+    }
 
     console.log('browser : visit done');
 
     const result: ScreenshotResult = {
-      // fileName,
       url,
+      // fileName,
       // pageTitle,
       // metrics,
     };
@@ -328,7 +307,26 @@ export class Browser {
     return results;
   }
 
-  private initPlugins() {}
+  /**
+   * Get all enabled plugins for this project. Defaults to all for now.
+   * @todo: Allow user to configure.
+   */
+  private getPlugins() {
+    const allPlugins: Plugin<unknown>[] = [
+      new fromPlugins.PageTitlePlugin(),
+      new fromPlugins.MetricsPlugin(),
+    ];
+    return allPlugins;
+  }
 
-  private runPlugins() {}
+  private async runPlugins(
+    page: puppeteer.Page,
+  ): Promise<PluginResult<unknown>[]> {
+    const plugins = this.getPlugins();
+    const pluginResults = await Promise.all(
+      plugins.map(plugin => plugin.run(page)),
+    );
+    console.log('plugin : results :', pluginResults);
+    return pluginResults;
+  }
 }
