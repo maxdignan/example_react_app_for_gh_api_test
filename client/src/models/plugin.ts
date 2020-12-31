@@ -5,11 +5,18 @@ export interface PluginResult<T> {
   data: T;
 }
 
+export interface PluginOptions {
+  path: string;
+}
+
 export abstract class Plugin<T> {
   abstract id: number;
   abstract name: string;
   abstract description: string;
-  abstract run(page: puppeteer.Page): Promise<PluginResult<unknown>>;
+  abstract run(
+    page: puppeteer.Page,
+    options: PluginOptions,
+  ): Promise<PluginResult<unknown>>;
 
   /**
    * Process the raw response from plugin execution.

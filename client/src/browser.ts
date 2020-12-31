@@ -4,7 +4,7 @@ import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
 import { ScreenshotResult } from './models/screenshot-result';
 import { exitWithError } from './util';
-import { Plugin, PluginResult } from './models/plugin';
+import { Plugin, PluginOptions, PluginResult } from './models/plugin';
 import * as fromPlugins from './plugins';
 
 export class Browser {
@@ -130,7 +130,6 @@ export class Browser {
   }): Promise<ScreenshotResult> {
     const { route, serverUrl, config, path, page } = data;
     const url = route.getFullUrl(serverUrl, config);
-    const fileName = Route.getFileNameFromURL(serverUrl, url);
 
     console.log(`browser : visit : ${url}`);
 
@@ -155,43 +154,22 @@ export class Browser {
     }
 
     // Set viewport dimensions
+    /** @todo: Configure this for each route? */
     await page.setViewport({
-      /** @todo: Configure this for each route? */
       width: 1400,
-      /** @todo: Configure this for each route? */
       height: 1200,
-      /** @todo: Configure this for each route? */
       // deviceScaleFactor: 2,
     });
-
-    // console.log(`browser : saving screenshot as : ${fileName}`);
-
-    // Original
-    // let pageTitle: string;
-    // let metrics: ScreenshotResultMetrics;
-    // try {
-    //   [, pageTitle, metrics] = await Promise.all([
-    //     await page.screenshot({
-    //       path: join(path, `${fileName}.png`),
-    //       fullPage: true,
-    //       type: 'png',
-    //     }),
-    //     await page.title(),
-    //     await this.parseMetrics(await page.metrics()),
-    //   ]);
-    // } catch (err) {
-    //   exitWithError(err);
-    // }
 
     let plugins: PluginResult<unknown>[] = [];
 
     try {
-      plugins = await this.runPlugins(page);
+      plugins = await this.runPlugins(page, { path });
     } catch (err) {
       exitWithError(err);
     }
 
-    console.log('browser : visit done');
+    console.log('browser : visit done \n \n');
 
     const result: ScreenshotResult = {
       url,
@@ -313,18 +291,23 @@ export class Browser {
    */
   private getPlugins() {
     const allPlugins: Plugin<unknown>[] = [
-      new fromPlugins.PageTitlePlugin(),
-      new fromPlugins.MetricsPlugin(),
+      // new fromPlugins.PageTitlePlugin(),
+      // new fromPlugins.MetricsPlugin(),
+      // new fromPlugins.PageScreenShotPlugin(),
     ];
     return allPlugins;
   }
 
   private async runPlugins(
     page: puppeteer.Page,
+    options: PluginOptions,
   ): Promise<PluginResult<unknown>[]> {
     const plugins = this.getPlugins();
+    if (!plugins.length) {
+      exitWithError('No plugins defined');
+    }
     const pluginResults = await Promise.all(
-      plugins.map(plugin => plugin.run(page)),
+      plugins.map(plugin => plugin.run(page, options)),
     );
     console.log('plugin : results :', pluginResults);
     return pluginResults;
