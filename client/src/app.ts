@@ -20,9 +20,8 @@ class App {
 
   constructor(private args: Partial<AppArgs>) {
     console.time('run');
-    /** @todo: Validate args on construct. */
     // console.log('app : args :', args);
-    this.setBranchName();
+    // this.setBranchName();
   }
 
   /**
@@ -107,21 +106,27 @@ class App {
     } catch (err) {
       exitWithError(`Could not locate parser config, error: ${err}`);
     }
-    // Get ART config
+
+    // Get emtrey config
     let projectConfig: ProjectConfig;
     try {
       projectConfig = await this.readProjectConfig(this.args.dir);
     } catch (err) {
       console.log('app : could not locate project config');
     }
+
+    // Prepare fs
     const path = await this.prepareScreenshotDirectory(
       projectConfig,
       this.args.dir,
     );
+
     // Sniff out all project routes based on config
     const routes = await new URLParser(parserConfig).getRoutes(this.args.dir);
+
     // Check localhost. @todo: Support skipping this.
     await this.confirmProjectIsRunning(this.args.url, routes[0]);
+
     // Browse and take screen shots.
     const results = await new Browser().visitRoutes(
       routes,
@@ -129,6 +134,7 @@ class App {
       path,
       projectConfig,
     );
+
     // Post data to server.
     // try {
     //   await this.submitResults(
@@ -201,7 +207,7 @@ class App {
 
       req.on('response', res => {
         console.log('app : submission response :', res.statusCode);
-        res.statusCode === 200 ? resolve() : reject();
+        res.statusCode === 200 ? resolve(null) : reject();
       });
 
       form.pipe(req);
@@ -226,13 +232,14 @@ class App {
         }
         resolve(path);
       } else {
-        rimraf.default(`${path}/*`, {}, err => {
-          if (err) {
-            return reject(err);
-          }
-          console.log('app : screenshot directory emptied :', path);
-          resolve(path);
-        });
+        resolve(path);
+        // rimraf.default(`${path}/*`, {}, err => {
+        //   if (err) {
+        //     return reject(err);
+        //   }
+        //   console.log('app : screenshot directory emptied :', path);
+        //   resolve(path);
+        // });
       }
     });
   }
@@ -244,7 +251,7 @@ class App {
         if (err) {
           return reject(err);
         }
-        resolve();
+        resolve(null);
       });
     });
   }

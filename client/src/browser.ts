@@ -294,6 +294,7 @@ export class Browser {
       // new fromPlugins.PageTitlePlugin(),
       // new fromPlugins.MetricsPlugin(),
       // new fromPlugins.PageScreenShotPlugin(),
+      new fromPlugins.ComponentScreenShotPlugin(),
     ];
     return allPlugins;
   }
