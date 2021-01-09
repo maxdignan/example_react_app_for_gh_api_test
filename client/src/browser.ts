@@ -129,6 +129,7 @@ export class Browser {
     page: puppeteer.Page;
   }): Promise<ScreenshotResult> {
     const { route, serverUrl, config, path, page } = data;
+
     const url = route.getFullUrl(serverUrl, config);
 
     console.log(`browser : visit : ${url}`);
@@ -164,7 +165,10 @@ export class Browser {
     let plugins: PluginResult<unknown>[] = [];
 
     try {
-      plugins = await this.runPlugins(page, { path });
+      plugins = await this.runPlugins(page, {
+        path,
+        routeId: Route.getFileNameFromURL(url),
+      });
     } catch (err) {
       exitWithError(err);
     }

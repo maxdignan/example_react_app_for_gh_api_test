@@ -6,6 +6,7 @@ export interface PluginResult<T> {
 }
 
 export interface PluginOptions {
+  routeId: string;
   path: string;
 }
 

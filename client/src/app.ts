@@ -233,13 +233,13 @@ class App {
         resolve(path);
       } else {
         resolve(path);
-        // rimraf.default(`${path}/*`, {}, err => {
-        //   if (err) {
-        //     return reject(err);
-        //   }
-        //   console.log('app : screenshot directory emptied :', path);
-        //   resolve(path);
-        // });
+        rimraf.default(`${path}/*`, {}, err => {
+          if (err) {
+            return reject(err);
+          }
+          console.log('app : screenshot directory emptied :', path);
+          resolve(path);
+        });
       }
     });
   }

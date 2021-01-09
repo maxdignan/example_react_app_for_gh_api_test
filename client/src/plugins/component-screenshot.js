@@ -2,6 +2,9 @@
  * Proof of concept to find weighted components.
  */
 window.$plugin = () => {
+  // Generates a unique key that includes the element tag and class
+  var getElementKey = element => `${element.tagName}::${element.className}`;
+
   // Get all elements
   var elements = Array.from(document.body.querySelectorAll('[class]'));
 
@@ -19,7 +22,7 @@ window.$plugin = () => {
   var counts = elements.reduce(
     (acc, element) => ({
       ...acc,
-      [element.className]: (acc[element.className] || 0) + 1,
+      [getElementKey(element)]: (acc[getElementKey(element)] || 0) + 1,
     }),
     {},
   );
@@ -35,8 +38,9 @@ window.$plugin = () => {
   // console.log(highestWeightedElements);
 
   // Be sure you stringify any result or it will be empty!
-  var pluginResults = highestWeightedElements.map(res => {
-    const element = document.body.querySelector(`[class="${res.cls}"]`);
+  var pluginResults = highestWeightedElements.slice(0, 1).map(res => {
+    const cls = res.cls.split('::')[1];
+    const element = document.body.querySelector(`[class="${cls}"]`);
     const rect = element.getBoundingClientRect();
     return JSON.stringify({
       ...res,
