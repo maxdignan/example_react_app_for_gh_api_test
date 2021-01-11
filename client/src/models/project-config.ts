@@ -26,7 +26,7 @@ export class ProjectConfig {
   outputDirectory: string;
 
   /** Maximum amount of screens to take. */
-  limit: number = 1;
+  limit: number;
 
   /** Location of API. */
   apiURL = 'localhost';

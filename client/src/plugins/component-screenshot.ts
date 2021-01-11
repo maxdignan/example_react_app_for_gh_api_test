@@ -4,14 +4,11 @@ import { join } from 'path';
 import { exitWithError } from '../util';
 import { Plugin, PluginOptions } from '../models/plugin';
 
-export interface ComponentScreenShotPluginData {
-  count: number;
-  cls: string;
-  rect: DOMRect;
-  tag: string;
-}
+// Response from running plugin script in puppeteer page instance
+export type ComponentScreenShotPluginData = string;
 
-export type ExtendedComponentScreenShotPluginData = ComponentScreenShotPluginData & {
+export type ExtendedComponentScreenShotPluginData = {
+  cls: string;
   fileName: string;
 };
 
@@ -24,11 +21,11 @@ export class ComponentScreenShotPlugin extends Plugin<any> {
   description = '';
 
   static getFileNameFromScriptData(
-    data: ComponentScreenShotPluginData,
+    data: string,
     routeId: string,
     index: number,
   ): string {
-    const idParts = data.cls.split('::');
+    const idParts = data.split('::');
     return `${routeId}_${idParts[0]}_${index}`;
   }
 
@@ -49,17 +46,18 @@ export class ComponentScreenShotPlugin extends Plugin<any> {
 
     const extension = this.getExtension();
 
+    console.log('plugin : component screenshot result :', scriptResult);
+
     // Parse injected script result and create extended data
     const scriptData: ExtendedComponentScreenShotPluginData[] = scriptResult.map(
       (result, index) => {
-        const data: ComponentScreenShotPluginData = JSON.parse(result);
         const prefileName = ComponentScreenShotPlugin.getFileNameFromScriptData(
-          data,
+          result,
           options.routeId,
           index,
         );
         const fileName = `${prefileName}.${extension}`;
-        return Object.assign({}, data, { fileName });
+        return { fileName, cls: result };
       },
     );
 
@@ -68,20 +66,18 @@ export class ComponentScreenShotPlugin extends Plugin<any> {
       const { fileName } = data;
       const path = join(options.path, fileName);
       try {
-        const cls = data.cls.split('::');
-        const component = await page.$(`${cls[0]}[class="${cls[1]}"]`);
-        const bounding_box = await component.boundingBox();
-        console.log(cls, bounding_box);
+        const [, xpath] = data.cls.split('::');
+        const component = (await page.$x(xpath))[0];
+        // const boundingBox = await component.boundingBox();
         await component.screenshot({
-          // Adding clip is causing the image to cut off
-          // clip: {
-          //   x: bounding_box.x,
-          //   y: bounding_box.y,
-          //   width: bounding_box.width,
-          //   height: bounding_box.height,
-          // },
           path,
-          // type: extension,
+          // Adding clip is causing the image to cut off - bug with Puppeteer?
+          // clip: {
+          //   x: boundingBox.x,
+          //   y: boundingBox.y,
+          //   width: boundingBox.width,
+          //   height: boundingBox.height,
+          // },
         });
       } catch (err) {
         exitWithError(err);

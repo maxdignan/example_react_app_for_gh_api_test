@@ -164,6 +164,10 @@ export class Browser {
 
     let plugins: PluginResult<unknown>[] = [];
 
+    // Brief pause before executing plugins.
+    // This appears to resolve plugin component cropping/dimension issues.
+    await page.waitFor(100);
+
     try {
       plugins = await this.runPlugins(page, {
         path,
@@ -197,10 +201,10 @@ export class Browser {
     const browser = await puppeteer.launch(this.launchConfig);
 
     // Limit max amount of shots
-    if (config.limit) {
-      console.log(`browser : limiting routes to ${config.limit}`);
-      routes = routes.slice(0, config.limit);
-    }
+    // if (config.limit) {
+    //   console.log(`browser : limiting routes to ${config.limit}`);
+    //   routes = routes.slice(0, config.limit);
+    // }
 
     let page: puppeteer.Page;
     let hasVisitedLogin = false;
