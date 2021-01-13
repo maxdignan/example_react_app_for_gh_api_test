@@ -6,10 +6,12 @@ import {
   ScreenshotResult,
   MetaDataResult,
   Result,
+  AnalyzedMetaData,
 } from './models/screenshot-result';
 import { exitWithError } from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
 import * as fromPlugins from './plugins';
+import { join } from 'path';
 
 export class Browser {
   private authorized = false;
@@ -131,7 +133,7 @@ export class Browser {
     config: ProjectConfig;
     path: string;
     page: puppeteer.Page;
-  }): Promise<ScreenshotResult> {
+  }): Promise<ScreenshotResult | null> {
     const { route, serverUrl, config, path, page } = data;
 
     const url = route.getFullUrl(serverUrl, config);
@@ -207,7 +209,6 @@ export class Browser {
 
     let page: puppeteer.Page;
     let hasVisitedLogin = false;
-    let hasBuiltStyleGuide = false;
 
     const results: ScreenshotResult[] = [];
     const metaData: MetaDataResult[] = [];
@@ -239,7 +240,7 @@ export class Browser {
     }
 
     // Go through every route and take a shot
-    for (const route of routes) {
+    for (const [index, route] of routes.entries()) {
       // const reusedPage = page || (await browser.newPage());
       const reusedPage = await browser.newPage();
 
@@ -283,10 +284,10 @@ export class Browser {
       results.push(await this.visitRoute(params));
       metaData.push(await this.collectMetaData(params));
 
-      // Build style guide
-      if (!hasBuiltStyleGuide) {
-        await this.buildStyleGuide(params);
-        hasBuiltStyleGuide = true;
+      // Build style guide on last iteration
+      if (index === routes.length - 1) {
+        const analyzedMetaData = await this.analyzeMetaData(metaData);
+        await this.buildStyleGuide(analyzedMetaData, reusedPage, path);
       }
 
       // Only reuse the first page - seems to work best with example NG app
@@ -298,7 +299,8 @@ export class Browser {
     await browser.close();
     console.log('browser : done');
 
-    const result = { results, metaData };
+    // Might not need to return meta data anymore.
+    const result = { results };
     return result;
   }
 
@@ -329,18 +331,30 @@ export class Browser {
   }
 
   /**
-   * @todo
+   * Build HTML template on page using meta data.
    */
-  private buildStyleGuide(data: {
-    route: Route;
-    serverUrl: string;
-    config: ProjectConfig;
-    path: string;
-    page: puppeteer.Page;
-  }) {}
+  private async buildStyleGuide(
+    metaData: AnalyzedMetaData,
+    page: puppeteer.Page,
+    path: string,
+  ) {
+    console.log('browser : building style guide at :', path);
+    try {
+      await page.evaluate(text => {
+        document.body.innerHTML = `<h1>${text}</h1>`;
+      }, 'Hello');
+      // Could be SVG?
+      const fileName = 'style-guide.png';
+      await page.screenshot({ path: join(path, fileName), fullPage: true });
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  }
 
   /**
-   * Collect arbitrary from each page after plugins run.
+   * Collect arbitrary data on each route visit.
    */
   private async collectMetaData(params: {
     route: Route;
@@ -349,7 +363,7 @@ export class Browser {
     path: string;
     page: puppeteer.Page;
   }): Promise<MetaDataResult> {
-    console.log('browser : collecting metadata on route :', params.route.url);
+    // console.log('browser : collecting metadata on route :', params.route.url);
 
     let buttonClasses: string[] = [];
 
@@ -369,5 +383,49 @@ export class Browser {
     const metaData = { buttonClasses };
 
     return { metaData };
+  }
+
+  private analyzeMetaData(metaData: any[]): AnalyzedMetaData {
+    // console.log('browser : analyze meta data');
+
+    // Deserialize route metadata for this one-off example
+    const buttonClasses: string[][] = metaData.map(({ metaData }) => {
+      const { buttonClasses } = metaData;
+      return buttonClasses;
+    });
+
+    // Map of the amount of times a button class recurs
+    const buttonClassCountMap = buttonClasses.reduce((a, b) => {
+      if (!b.length) {
+        return a;
+      }
+      // Because the classes can be as:
+      // ["class list-1", "class list-2", "class etc..."]
+      // or simply:
+      // ["class"]
+      b.join(' ')
+        .split(' ')
+        .forEach(c => (c in a ? ++a[c] : (a[c] = 1)));
+      return a;
+    }, {} as { [key: string]: number });
+
+    // Order items by highest recurrence
+    let mostUsedButtonClasses = Object.keys(buttonClassCountMap).sort((a, b) =>
+      buttonClassCountMap[a] > buttonClassCountMap[b] ? -1 : 1,
+    );
+
+    // Remove classes that are not derived from base class, join base class with sub classes.
+    const baseClass = mostUsedButtonClasses[0];
+    const childClasses = mostUsedButtonClasses
+      .slice(1)
+      .filter(cls => cls.includes(baseClass))
+      .map(cls => `${baseClass} ${cls}`);
+
+    mostUsedButtonClasses = [baseClass, ...childClasses];
+
+    // console.log('button classes', mostUsedButtonClasses);
+    return {
+      buttonClasses: mostUsedButtonClasses,
+    };
   }
 }

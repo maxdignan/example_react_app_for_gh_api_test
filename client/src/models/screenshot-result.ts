@@ -9,10 +9,6 @@ export interface ScreenshotResultMetrics {
 export interface ScreenshotResult {
   url: string;
   plugins: PluginResult<unknown>[];
-  // Will be moved to plugins
-  // fileName: string;
-  // pageTitle: string;
-  // metrics: ScreenshotResultMetrics;
 }
 
 export interface MetaDataResult {
@@ -21,5 +17,9 @@ export interface MetaDataResult {
 
 export interface Result {
   results: ScreenshotResult[];
-  metaData: MetaDataResult[];
+  // metaData: any;
+}
+
+export interface AnalyzedMetaData {
+  buttonClasses: string[];
 }

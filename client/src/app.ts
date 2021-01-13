@@ -128,15 +128,14 @@ class App {
     await this.confirmProjectIsRunning(this.args.url, routes[0]);
 
     // Browse to routes and execute plugins
-    const results = await new Browser().visitRoutes(
+    const browser = new Browser();
+
+    const results = await browser.visitRoutes(
       routes,
       this.args.url,
       path,
       projectConfig,
     );
-
-    // Analyze meta data
-    this.analyzeMetaData(results);
 
     // console.log('browser : run : final results :', results);
 
@@ -259,47 +258,6 @@ class App {
         resolve(null);
       });
     });
-  }
-
-  private analyzeMetaData(result: Result) {
-    console.log('app : analyze meta data');
-
-    // Deserialize route metadata for this one-off example
-    const buttonClasses: string[][] = result.metaData.map(({ metaData }) => {
-      const { buttonClasses } = metaData;
-      return buttonClasses;
-    });
-
-    // Map of the amount of times a button class recurs
-    const buttonClassCountMap = buttonClasses.reduce((a, b) => {
-      if (!b.length) {
-        return a;
-      }
-      // Because the classes can be as:
-      // ["class list-1", "class list-2", "class etc..."]
-      // or simply:
-      // ["class"]
-      b.join(' ')
-        .split(' ')
-        .forEach(c => (c in a ? ++a[c] : (a[c] = 1)));
-      return a;
-    }, {} as { [key: string]: number });
-
-    // Order items by highest recurrence
-    let mostUsedButtonClasses = Object.keys(buttonClassCountMap).sort((a, b) =>
-      buttonClassCountMap[a] > buttonClassCountMap[b] ? -1 : 1,
-    );
-
-    // Remove classes that are not derived from base class, join base class with sub classes.
-    const baseClass = mostUsedButtonClasses[0];
-    const childClasses = mostUsedButtonClasses
-      .slice(1)
-      .filter(cls => cls.includes(baseClass))
-      .map(cls => `${baseClass} ${cls}`);
-
-    mostUsedButtonClasses = [baseClass, ...childClasses];
-
-    console.log('button classes', mostUsedButtonClasses);
   }
 }
 
