@@ -1,4 +1,7 @@
 import puppeteer, { LaunchOptions } from 'puppeteer';
+import { join } from 'path';
+import { compile } from 'handlebars';
+import * as fs from 'fs';
 
 import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
@@ -11,7 +14,6 @@ import {
 import { exitWithError } from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
 import * as fromPlugins from './plugins';
-import { join } from 'path';
 
 export class Browser {
   private authorized = false;
@@ -330,8 +332,20 @@ export class Browser {
     return pluginResults;
   }
 
+  private async getStyleGuideHTML(): Promise<string> {
+    let content: string;
+    const path = 'src/style-guide/style-guide-template.html';
+    try {
+      content = await fs.promises.readFile(path, 'utf-8');
+    } catch (err) {
+      console.error(err);
+    }
+    return content;
+  }
+
   /**
    * Build HTML template on page using meta data.
+   * @todo: Some research on the best output for this - we could do SVG/PDF or whatever
    */
   private async buildStyleGuide(
     metaData: AnalyzedMetaData,
@@ -340,10 +354,16 @@ export class Browser {
   ) {
     console.log('browser : building style guide at :', path);
     try {
-      await page.evaluate(text => {
-        document.body.innerHTML = `<h1>${text}</h1>`;
-      }, 'Hello');
-      // Could be SVG?
+      const templateParams = {};
+      const html = await this.getStyleGuideHTML();
+      const compiledStyleGuideTemplate = compile(html)(templateParams);
+
+      console.log(compiledStyleGuideTemplate);
+
+      await page.evaluate(html => {
+        document.body.innerHTML = html;
+      }, compiledStyleGuideTemplate);
+
       const fileName = 'style-guide.png';
       await page.screenshot({ path: join(path, fileName), fullPage: true });
       return true;
