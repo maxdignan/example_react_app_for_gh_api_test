@@ -1,4 +1,4 @@
-/** Config inside of project dir `art.config.js` */
+/** Config inside of project dir `emtrey.config.js` */
 export interface ProjectConfigInterface {
   readonly outputDirectory: string;
   readonly limit: number;
@@ -18,15 +18,15 @@ export interface ProjectConfigInterface {
 
 export class ProjectConfig {
   /** Defaults */
-  static defaultLimit = 20;
-  static defaultDir = '.art_tmp';
+  static defaultLimit = 10;
+  static defaultDir = '.emtrey_tmp';
   static defaultLoginUrl = 'login';
 
   /** Local directory where screens will be stored. */
   outputDirectory: string;
 
   /** Maximum amount of screens to take. */
-  limit: number = 1;
+  limit: number;
 
   /** Location of API. */
   apiURL = 'localhost';

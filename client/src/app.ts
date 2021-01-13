@@ -9,7 +9,7 @@ import { URLParser } from './url-parser';
 import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
 import { AppArgs } from './models/args';
-import { ScreenshotResult } from './models/screenshot-result';
+import { Result, ScreenshotResult } from './models/screenshot-result';
 import { Browser } from './browser';
 import { exitWithError, getArgs, xhrGet } from './util';
 import { FrameworkParser } from './framework-parser';
@@ -20,9 +20,8 @@ class App {
 
   constructor(private args: Partial<AppArgs>) {
     console.time('run');
-    /** @todo: Validate args on construct. */
     // console.log('app : args :', args);
-    this.setBranchName();
+    // this.setBranchName();
   }
 
   /**
@@ -52,7 +51,7 @@ class App {
    * Look for an ART project config file in the source directory.
    */
   private async readProjectConfig(projectUrl: string): Promise<ProjectConfig> {
-    const file = `${projectUrl}/art.config.js`;
+    const file = `${projectUrl}/emtrey.config.js`;
     let config: ProjectConfig;
     try {
       const fileContent = require(file);
@@ -107,28 +106,39 @@ class App {
     } catch (err) {
       exitWithError(`Could not locate parser config, error: ${err}`);
     }
-    // Get ART config
+
+    // Get emtrey config
     let projectConfig: ProjectConfig;
     try {
       projectConfig = await this.readProjectConfig(this.args.dir);
     } catch (err) {
       console.log('app : could not locate project config');
     }
+
+    // Prepare fs
     const path = await this.prepareScreenshotDirectory(
       projectConfig,
       this.args.dir,
     );
+
     // Sniff out all project routes based on config
     const routes = await new URLParser(parserConfig).getRoutes(this.args.dir);
+
     // Check localhost. @todo: Support skipping this.
     await this.confirmProjectIsRunning(this.args.url, routes[0]);
-    // Browse and take screen shots.
-    const results = await new Browser().visitRoutes(
+
+    // Browse to routes and execute plugins
+    const browser = new Browser();
+
+    const results = await browser.visitRoutes(
       routes,
       this.args.url,
       path,
       projectConfig,
     );
+
+    // console.log('browser : run : final results :', results);
+
     // Post data to server.
     // try {
     //   await this.submitResults(
@@ -164,15 +174,16 @@ class App {
     form.append('app', this.args.app);
     form.append('framework', framework);
 
-    results.forEach(async result => {
-      const fileName = `${path}/${result.fileName}.png`;
-      const stream = createReadStream(fileName);
-      form.append('files[]', stream);
-      form.append('fileNames[]', result.fileName);
-      form.append('pageTitles[]', result.pageTitle);
-      form.append('metrics[]', JSON.stringify(result.metrics));
-      form.append('urls[]', result.url);
-    });
+    // Disabled while plugins are under development
+    // results.forEach(async result => {
+    //   const fileName = `${path}/${result.fileName}.png`;
+    //   const stream = createReadStream(fileName);
+    //   form.append('files[]', stream);
+    //   form.append('fileNames[]', result.fileName);
+    //   form.append('pageTitles[]', result.pageTitle);
+    //   form.append('metrics[]', JSON.stringify(result.metrics));
+    //   form.append('urls[]', result.url);
+    // });
 
     console.log(
       'app : submitting results :',
@@ -200,7 +211,7 @@ class App {
 
       req.on('response', res => {
         console.log('app : submission response :', res.statusCode);
-        res.statusCode === 200 ? resolve() : reject();
+        res.statusCode === 200 ? resolve(null) : reject();
       });
 
       form.pipe(req);
@@ -225,6 +236,7 @@ class App {
         }
         resolve(path);
       } else {
+        resolve(path);
         rimraf.default(`${path}/*`, {}, err => {
           if (err) {
             return reject(err);
@@ -243,7 +255,7 @@ class App {
         if (err) {
           return reject(err);
         }
-        resolve();
+        resolve(null);
       });
     });
   }

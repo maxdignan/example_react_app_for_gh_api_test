@@ -7,10 +7,14 @@ interface RouteInterface {
 export class Route implements RouteInterface {
   url: string;
 
-  static getFileNameFromURL(serverUrl: string, url: string): string {
-    const base = url.replace(serverUrl, '').replace('/', '');
-    const split = base.split('/');
-    return split.length > 1 ? split.slice(-2).join('-') : base;
+  /**
+   * Create file name from full URL.
+   * @example: http://localhost:4400/404
+   * Will return `404`
+   */
+  static getFileNameFromURL(url: string): string {
+    const parts = url.split('/');
+    return parts.pop();
   }
 
   constructor(data: RouteInterface) {

@@ -1,14 +1,25 @@
+import { PluginResult } from './plugin';
+
 export interface ScreenshotResultMetrics {
   layout: number;
   script: number;
   heap: number;
 }
 
-interface ScreenshotResultInterface {
-  fileName: string;
+export interface ScreenshotResult {
   url: string;
-  pageTitle: string;
-  metrics: ScreenshotResultMetrics;
+  plugins: PluginResult<unknown>[];
 }
 
-export type ScreenshotResult = Readonly<ScreenshotResultInterface>;
+export interface MetaDataResult {
+  metaData: any;
+}
+
+export interface Result {
+  results: ScreenshotResult[];
+  // metaData: any;
+}
+
+export interface AnalyzedMetaData {
+  buttonClasses: string[];
+}

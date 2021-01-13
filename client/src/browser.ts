@@ -1,13 +1,19 @@
-import { join } from 'path';
 import puppeteer, { LaunchOptions } from 'puppeteer';
+import { join } from 'path';
+import { compile } from 'handlebars';
+import * as fs from 'fs';
 
 import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
 import {
   ScreenshotResult,
-  ScreenshotResultMetrics,
+  MetaDataResult,
+  Result,
+  AnalyzedMetaData,
 } from './models/screenshot-result';
 import { exitWithError } from './util';
+import { Plugin, PluginOptions, PluginResult } from './models/plugin';
+import * as fromPlugins from './plugins';
 
 export class Browser {
   private authorized = false;
@@ -32,12 +38,8 @@ export class Browser {
           const options = { bubbles: true, cancelable: true };
           el.dispatchEvent(new Event('focus', options));
           el.value = val;
-          el.dispatchEvent(new Event('keydown', options));
-          el.dispatchEvent(new Event('keypress', options));
-          el.dispatchEvent(new Event('keyup', options));
           el.dispatchEvent(new Event('input', options));
           el.dispatchEvent(new Event('change', options));
-          el.dispatchEvent(new Event('blur', options));
           return el.value;
         },
         config.login.user,
@@ -48,12 +50,8 @@ export class Browser {
           const options = { bubbles: true, cancelable: true };
           el.dispatchEvent(new Event('focus', options));
           el.value = val;
-          el.dispatchEvent(new Event('keydown', options));
-          el.dispatchEvent(new Event('keypress', options));
-          el.dispatchEvent(new Event('keyup', options));
           el.dispatchEvent(new Event('input', options));
           el.dispatchEvent(new Event('change', options));
-          el.dispatchEvent(new Event('blur', options));
           return el.value;
         },
         config.login.password,
@@ -129,20 +127,7 @@ export class Browser {
   }
 
   /**
-   * Parse puppetter-native metrics into proprietary.
-   */
-  private async parseMetrics(
-    metrics: puppeteer.Metrics,
-  ): Promise<ScreenshotResultMetrics> {
-    return {
-      layout: metrics.LayoutDuration,
-      script: metrics.ScriptDuration,
-      heap: metrics.JSHeapTotalSize,
-    };
-  }
-
-  /**
-   * Core logic to handle navigation and screenshots.
+   * Core logic to handle navigation and running plugins.
    */
   private async visitRoute(data: {
     route: Route;
@@ -150,12 +135,12 @@ export class Browser {
     config: ProjectConfig;
     path: string;
     page: puppeteer.Page;
-  }): Promise<ScreenshotResult> {
+  }): Promise<ScreenshotResult | null> {
     const { route, serverUrl, config, path, page } = data;
-    const url = route.getFullUrl(serverUrl, config);
-    const fileName = Route.getFileNameFromURL(serverUrl, url);
 
-    console.log(`browser : ${url}`);
+    const url = route.getFullUrl(serverUrl, config);
+
+    console.log(`browser : visit : ${url}`);
 
     // Navigate to the route.
     await page.goto(url, { waitUntil: ['load'] });
@@ -170,63 +155,52 @@ export class Browser {
       }
       // Check for delay config
       const delay = config.getURLProp(route.url, 'delay');
-      // Timeout before taking screenshot in MS
+      // Timeout before executing plugins in MS
       if (delay && !isNaN(delay)) {
         // console.log(`browser : delay for : ${delay} milliseconds`);
-        await new Promise(r => setTimeout(r, delay));
+        await page.waitFor(delay);
       }
     }
 
-    // Set screenshot dimensions
+    // Set viewport dimensions
+    /** @todo: Configure this for each route? */
     await page.setViewport({
-      /** @todo: Configure this for each route? */
       width: 1400,
-      /** @todo: Configure this for each route? */
       height: 1200,
-      /** @todo: Configure this for each route? */
       // deviceScaleFactor: 2,
     });
 
-    // console.log(`browser : saving screenshot as : ${fileName}`);
+    let plugins: PluginResult<unknown>[] = [];
 
-    let pageTitle: string;
-    let metrics: ScreenshotResultMetrics;
+    // Brief pause before executing plugins.
+    // This appears to resolve plugin component cropping/dimension issues.
+    await page.waitFor(10);
 
     try {
-      [, pageTitle, metrics] = await Promise.all([
-        await page.screenshot({
-          path: join(path, `${fileName}.png`),
-          fullPage: true,
-          type: 'png',
-        }),
-        await page.title(),
-        await this.parseMetrics(await page.metrics()),
-      ]);
+      plugins = await this.runPlugins(page, {
+        path,
+        routeId: Route.getFileNameFromURL(url),
+      });
     } catch (err) {
       exitWithError(err);
     }
 
-    console.log('browser : visit done');
+    console.log('browser : visit done \n \n');
 
-    const result: ScreenshotResult = {
-      fileName,
-      pageTitle,
-      metrics,
-      url,
-    };
+    const result: ScreenshotResult = { url, plugins };
 
     return result;
   }
 
   /**
-   * Entrance to iterate through all routes.
+   * Entrance to iterate through all routes, run all plugins and data collection.
    */
   public async visitRoutes(
     routes: Route[],
     serverUrl: string,
     path: string,
     config: ProjectConfig,
-  ): Promise<ScreenshotResult[]> {
+  ): Promise<Result> {
     const browser = await puppeteer.launch(this.launchConfig);
 
     // Limit max amount of shots
@@ -239,15 +213,14 @@ export class Browser {
     let hasVisitedLogin = false;
 
     const results: ScreenshotResult[] = [];
+    const metaData: MetaDataResult[] = [];
 
     // Some route needs to auth, lets auth first then go take shots.
     const willAuth = routes.some(r => config.willAuthorizeURL(r.url));
 
     if (!this.authorized && willAuth) {
       // Hit the login route first to capture unauthorized/login view.
-      const loginRoute = routes.find(
-        route => route.url === config.getLoginUrl(),
-      );
+      const loginRoute = routes.find(r => r.url === config.getLoginUrl());
       if (loginRoute) {
         // New page for login route.
         page = await browser.newPage();
@@ -269,7 +242,7 @@ export class Browser {
     }
 
     // Go through every route and take a shot
-    for (const route of routes) {
+    for (const [index, route] of routes.entries()) {
       // const reusedPage = page || (await browser.newPage());
       const reusedPage = await browser.newPage();
 
@@ -302,14 +275,22 @@ export class Browser {
       //   );
       // });
 
-      const result = await this.visitRoute({
+      const params = {
         route,
         serverUrl,
         config,
         path,
         page: reusedPage,
-      });
-      results.push(result);
+      };
+
+      results.push(await this.visitRoute(params));
+      metaData.push(await this.collectMetaData(params));
+
+      // Build style guide on last iteration
+      if (index === routes.length - 1) {
+        const analyzedMetaData = await this.analyzeMetaData(metaData);
+        await this.buildStyleGuide(analyzedMetaData, reusedPage, path);
+      }
 
       // Only reuse the first page - seems to work best with example NG app
       await page?.close();
@@ -319,6 +300,152 @@ export class Browser {
 
     await browser.close();
     console.log('browser : done');
-    return results;
+
+    // Might not need to return meta data anymore.
+    const result = { results };
+    return result;
+  }
+
+  /**
+   * Get all enabled plugins for this project. Defaults to all for now.
+   * @todo: Allow user to configure.
+   */
+  private getPlugins() {
+    const allPlugins: Plugin<unknown>[] = [
+      // new fromPlugins.PageTitlePlugin(),
+      // new fromPlugins.MetricsPlugin(),
+      // new fromPlugins.PageScreenShotPlugin(),
+      // new fromPlugins.ComponentScreenShotPlugin(),
+    ];
+    return allPlugins;
+  }
+
+  private async runPlugins(
+    page: puppeteer.Page,
+    options: PluginOptions,
+  ): Promise<PluginResult<unknown>[]> {
+    const plugins = this.getPlugins();
+    const pluginResults = await Promise.all(
+      plugins.map(plugin => plugin.run(page, options)),
+    );
+    console.log('plugin : results :', pluginResults);
+    return pluginResults;
+  }
+
+  private async getStyleGuideHTML(): Promise<string> {
+    let content: string;
+    const path = 'src/style-guide/style-guide-template.html';
+    try {
+      content = await fs.promises.readFile(path, 'utf-8');
+    } catch (err) {
+      console.error(err);
+    }
+    return content;
+  }
+
+  /**
+   * Build HTML template on page using meta data.
+   * @todo: Some research on the best output for this - we could do SVG/PDF or whatever
+   */
+  private async buildStyleGuide(
+    metaData: AnalyzedMetaData,
+    page: puppeteer.Page,
+    path: string,
+  ) {
+    console.log('browser : building style guide at :', path);
+    try {
+      const templateParams = {};
+      const html = await this.getStyleGuideHTML();
+      const compiledStyleGuideTemplate = compile(html)(templateParams);
+
+      console.log(compiledStyleGuideTemplate);
+
+      await page.evaluate(html => {
+        document.body.innerHTML = html;
+      }, compiledStyleGuideTemplate);
+
+      const fileName = 'style-guide.png';
+      await page.screenshot({ path: join(path, fileName), fullPage: true });
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  }
+
+  /**
+   * Collect arbitrary data on each route visit.
+   */
+  private async collectMetaData(params: {
+    route: Route;
+    serverUrl: string;
+    config: ProjectConfig;
+    path: string;
+    page: puppeteer.Page;
+  }): Promise<MetaDataResult> {
+    // console.log('browser : collecting metadata on route :', params.route.url);
+
+    let buttonClasses: string[] = [];
+
+    // For button classes proof-of-concept
+    try {
+      const buttons = await params.page.$$('button');
+      const classNames = await Promise.all(
+        buttons.map(button => button.getProperty('className')),
+      );
+      buttonClasses = (await Promise.all(
+        classNames.map(c => c.jsonValue()),
+      )) as string[];
+    } catch (err) {
+      console.log(err);
+    }
+
+    const metaData = { buttonClasses };
+
+    return { metaData };
+  }
+
+  private analyzeMetaData(metaData: any[]): AnalyzedMetaData {
+    // console.log('browser : analyze meta data');
+
+    // Deserialize route metadata for this one-off example
+    const buttonClasses: string[][] = metaData.map(({ metaData }) => {
+      const { buttonClasses } = metaData;
+      return buttonClasses;
+    });
+
+    // Map of the amount of times a button class recurs
+    const buttonClassCountMap = buttonClasses.reduce((a, b) => {
+      if (!b.length) {
+        return a;
+      }
+      // Because the classes can be as:
+      // ["class list-1", "class list-2", "class etc..."]
+      // or simply:
+      // ["class"]
+      b.join(' ')
+        .split(' ')
+        .forEach(c => (c in a ? ++a[c] : (a[c] = 1)));
+      return a;
+    }, {} as { [key: string]: number });
+
+    // Order items by highest recurrence
+    let mostUsedButtonClasses = Object.keys(buttonClassCountMap).sort((a, b) =>
+      buttonClassCountMap[a] > buttonClassCountMap[b] ? -1 : 1,
+    );
+
+    // Remove classes that are not derived from base class, join base class with sub classes.
+    const baseClass = mostUsedButtonClasses[0];
+    const childClasses = mostUsedButtonClasses
+      .slice(1)
+      .filter(cls => cls.includes(baseClass))
+      .map(cls => `${baseClass} ${cls}`);
+
+    mostUsedButtonClasses = [baseClass, ...childClasses];
+
+    // console.log('button classes', mostUsedButtonClasses);
+    return {
+      buttonClasses: mostUsedButtonClasses,
+    };
   }
 }
