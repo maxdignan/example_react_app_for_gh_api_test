@@ -2,7 +2,11 @@ import puppeteer, { LaunchOptions } from 'puppeteer';
 
 import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
-import { ScreenshotResult } from './models/screenshot-result';
+import {
+  ScreenshotResult,
+  MetaDataResult,
+  Result,
+} from './models/screenshot-result';
 import { exitWithError } from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
 import * as fromPlugins from './plugins';
@@ -119,7 +123,7 @@ export class Browser {
   }
 
   /**
-   * Core logic to handle navigation and screenshots.
+   * Core logic to handle navigation and running plugins.
    */
   private async visitRoute(data: {
     route: Route;
@@ -147,10 +151,10 @@ export class Browser {
       }
       // Check for delay config
       const delay = config.getURLProp(route.url, 'delay');
-      // Timeout before taking screenshot in MS
+      // Timeout before executing plugins in MS
       if (delay && !isNaN(delay)) {
         // console.log(`browser : delay for : ${delay} milliseconds`);
-        await new Promise(r => setTimeout(r, delay));
+        await page.waitFor(delay);
       }
     }
 
@@ -166,7 +170,7 @@ export class Browser {
 
     // Brief pause before executing plugins.
     // This appears to resolve plugin component cropping/dimension issues.
-    await page.waitFor(100);
+    await page.waitFor(10);
 
     try {
       plugins = await this.runPlugins(page, {
@@ -179,46 +183,41 @@ export class Browser {
 
     console.log('browser : visit done \n \n');
 
-    const result: ScreenshotResult = {
-      url,
-      // fileName,
-      // pageTitle,
-      // metrics,
-    };
+    const result: ScreenshotResult = { url, plugins };
 
     return result;
   }
 
   /**
-   * Entrance to iterate through all routes.
+   * Entrance to iterate through all routes, run all plugins and data collection.
    */
   public async visitRoutes(
     routes: Route[],
     serverUrl: string,
     path: string,
     config: ProjectConfig,
-  ): Promise<ScreenshotResult[]> {
+  ): Promise<Result> {
     const browser = await puppeteer.launch(this.launchConfig);
 
     // Limit max amount of shots
-    // if (config.limit) {
-    //   console.log(`browser : limiting routes to ${config.limit}`);
-    //   routes = routes.slice(0, config.limit);
-    // }
+    if (config.limit) {
+      console.log(`browser : limiting routes to ${config.limit}`);
+      routes = routes.slice(0, config.limit);
+    }
 
     let page: puppeteer.Page;
     let hasVisitedLogin = false;
+    let hasBuiltStyleGuide = false;
 
     const results: ScreenshotResult[] = [];
+    const metaData: MetaDataResult[] = [];
 
     // Some route needs to auth, lets auth first then go take shots.
     const willAuth = routes.some(r => config.willAuthorizeURL(r.url));
 
     if (!this.authorized && willAuth) {
       // Hit the login route first to capture unauthorized/login view.
-      const loginRoute = routes.find(
-        route => route.url === config.getLoginUrl(),
-      );
+      const loginRoute = routes.find(r => r.url === config.getLoginUrl());
       if (loginRoute) {
         // New page for login route.
         page = await browser.newPage();
@@ -273,14 +272,22 @@ export class Browser {
       //   );
       // });
 
-      const result = await this.visitRoute({
+      const params = {
         route,
         serverUrl,
         config,
         path,
         page: reusedPage,
-      });
-      results.push(result);
+      };
+
+      results.push(await this.visitRoute(params));
+      metaData.push(await this.collectMetaData(params));
+
+      // Build style guide
+      if (!hasBuiltStyleGuide) {
+        await this.buildStyleGuide(params);
+        hasBuiltStyleGuide = true;
+      }
 
       // Only reuse the first page - seems to work best with example NG app
       await page?.close();
@@ -290,7 +297,9 @@ export class Browser {
 
     await browser.close();
     console.log('browser : done');
-    return results;
+
+    const result = { results, metaData };
+    return result;
   }
 
   /**
@@ -302,7 +311,7 @@ export class Browser {
       // new fromPlugins.PageTitlePlugin(),
       // new fromPlugins.MetricsPlugin(),
       // new fromPlugins.PageScreenShotPlugin(),
-      new fromPlugins.ComponentScreenShotPlugin(),
+      // new fromPlugins.ComponentScreenShotPlugin(),
     ];
     return allPlugins;
   }
@@ -312,13 +321,53 @@ export class Browser {
     options: PluginOptions,
   ): Promise<PluginResult<unknown>[]> {
     const plugins = this.getPlugins();
-    if (!plugins.length) {
-      exitWithError('No plugins defined');
-    }
     const pluginResults = await Promise.all(
       plugins.map(plugin => plugin.run(page, options)),
     );
     console.log('plugin : results :', pluginResults);
     return pluginResults;
+  }
+
+  /**
+   * @todo
+   */
+  private buildStyleGuide(data: {
+    route: Route;
+    serverUrl: string;
+    config: ProjectConfig;
+    path: string;
+    page: puppeteer.Page;
+  }) {}
+
+  /**
+   * Collect arbitrary from each page after plugins run.
+   */
+  private async collectMetaData(params: {
+    route: Route;
+    serverUrl: string;
+    config: ProjectConfig;
+    path: string;
+    page: puppeteer.Page;
+  }): Promise<MetaDataResult> {
+    console.log('browser : collecting metadata on route :', params.route.url);
+
+    let buttonClasses: string[] = [];
+
+    // For button classes proof-of-concept
+    try {
+      const buttons = await params.page.$$('button');
+      const classNames = await Promise.all(
+        buttons.map(button => button.getProperty('className')),
+      );
+      buttonClasses = (await Promise.all(
+        classNames.map(c => c.jsonValue()),
+      )) as string[];
+    } catch (err) {
+      console.log(err);
+    }
+
+    const metaData = { buttonClasses };
+
+    return { metaData };
   }
 }
