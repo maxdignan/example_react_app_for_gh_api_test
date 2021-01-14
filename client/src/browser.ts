@@ -1,7 +1,4 @@
 import puppeteer, { LaunchOptions } from 'puppeteer';
-import { join } from 'path';
-import { compile } from 'handlebars';
-import * as fs from 'fs';
 
 import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
@@ -9,14 +6,10 @@ import {
   ScreenshotResult,
   MetaDataResult,
   Result,
-  AnalyzedMetaData,
 } from './models/screenshot-result';
-import {
-  exitWithError,
-  allPropsForElement,
-  getElementClassCounts,
-} from './util';
+import { exitWithError, allPropsForElement } from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
+import { StlyeGuideBuilder } from './style-guide-builder';
 import * as fromPlugins from './plugins';
 
 export class Browser {
@@ -246,7 +239,8 @@ export class Browser {
     }
 
     // Go through every route and take a shot
-    for (const [index, route] of routes.entries()) {
+    for (const route of routes) {
+      /** @todo: We should be closing this page. */
       // const reusedPage = page || (await browser.newPage());
       const reusedPage = await browser.newPage();
 
@@ -290,16 +284,33 @@ export class Browser {
       results.push(await this.visitRoute(params));
       metaData.push(await this.collectMetaData(params));
 
-      // Build style guide on last iteration
-      if (index === routes.length - 1) {
-        const analyzedMetaData = await this.analyzeMetaData(metaData);
-        await this.buildStyleGuide(analyzedMetaData, reusedPage, path);
-      }
-
       // Only reuse the first page - seems to work best with example NG app
       await page?.close();
 
       page = null;
+    }
+
+    try {
+      // THIS SHOULD BE HANDLED IN STYLE GUIDE BUILDER!`1~
+      const sgb = await new StlyeGuideBuilder({ metaData, path });
+      const page = await browser.newPage();
+      let url: string;
+      if (sgb.metaDataWithInputElement) {
+        // Custom input elements
+        const route = routes.find(
+          r => r.url === sgb.metaDataWithInputElement.url,
+        );
+        // Can we prefer a URL in which we don't need wildcard params (/foo/:id)?
+        url = route.getFullUrl(serverUrl, config);
+      } else {
+        // Normal input elements
+        url = routes[0].getFullUrl(serverUrl, config);
+      }
+      await page.goto(url, { waitUntil: ['load'] });
+      await sgb.buildStyleGuide(page);
+      await page.close();
+    } catch (err) {
+      console.error(err);
     }
 
     await browser.close();
@@ -312,7 +323,6 @@ export class Browser {
 
   /**
    * Get all enabled plugins for this project. Defaults to all for now.
-   * @todo: Allow user to configure.
    */
   private getPlugins() {
     const allPlugins: Plugin<unknown>[] = [
@@ -334,51 +344,6 @@ export class Browser {
     );
     console.log('plugin : results :', pluginResults);
     return pluginResults;
-  }
-
-  /**
-   * Read style guide template from disk.
-   */
-  private async getStyleGuideHTML(): Promise<string> {
-    let content: string;
-    const path = 'src/style-guide/style-guide-template.html';
-    try {
-      content = await fs.promises.readFile(path, 'utf-8');
-    } catch (err) {
-      console.error(err);
-    }
-    return content;
-  }
-
-  /**
-   * Build HTML template on page using meta data.
-   * @todo: Some research on the best output for this - we could do SVG/PDF or whatever
-   */
-  private async buildStyleGuide(
-    metaData: AnalyzedMetaData,
-    page: puppeteer.Page,
-    path: string,
-  ) {
-    console.log('browser : building style guide :', metaData);
-
-    try {
-      // Define variables and compile template
-      const templateParams = metaData;
-      const html = await this.getStyleGuideHTML();
-      const compiledStyleGuideTemplate = compile(html)(templateParams);
-
-      // Place compiled html in host page
-      await page.evaluate(html => {
-        document.body.innerHTML = html;
-      }, compiledStyleGuideTemplate);
-
-      const fileName = 'style-guide.png';
-      await page.screenshot({ path: join(path, fileName), fullPage: true });
-      return true;
-    } catch (err) {
-      console.error(err);
-      return false;
-    }
   }
 
   /**
@@ -414,32 +379,5 @@ export class Browser {
     };
 
     return metaData;
-  }
-
-  /**
-   * Process meta data from each route visit into various statistics.
-   * Primarily for style guide generation at the moment.
-   */
-  private analyzeMetaData(metaData: MetaDataResult[]): AnalyzedMetaData {
-    console.log('analyze meta data', metaData);
-
-    const buttonClasses = getElementClassCounts(
-      metaData.map(m => m.buttonClasses),
-    );
-    // const inputClasses = getElementClassCounts(
-    //   metaData.map(m => m.inputClasses),
-    // );
-
-    // console.log('button classes', buttonClasses);
-    // console.log('input classes', inputClasses);
-
-    const analyzed: AnalyzedMetaData = {
-      buttonClasses,
-      // inputClasses,
-    };
-
-    // console.log('browser : analyzed metadata :', analyzed);
-
-    return analyzed;
   }
 }
