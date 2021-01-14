@@ -125,17 +125,33 @@
     <section-head>Buttons</section-head>
     <!-- @todo: Show states like hover, focus, etc. -->
     <section-content>
+      {{#each buttonClasses}}
       <div>
-        <div>.btn</div>
-        <button class="btn">Button</button>
+        <div>Classes: <kbd>{{this}}</kbd></div>
+        <button class="{{this}}">Button</button>
       </div>
-      <div>
+      <!-- <div>
         <div>.btn .btn-secondary</div>
         <button class="btn btn-secondary">Button</button>
       </div>
       <div>
         <div>.btn .btn-md</div>
         <button class="btn btn-md">Button</button>
+      </div> -->
+      {{/each}}
+    </section-content>
+  </section-group>
+</section>
+
+<section>
+  <section-group>
+    <section-head>
+      Inputs
+    </section-head>
+    <section-content>
+      <div>
+        <div>Text Input</div>
+        <input type="text" />
       </div>
     </section-content>
   </section-group>

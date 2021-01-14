@@ -12,14 +12,18 @@ export interface ScreenshotResult {
 }
 
 export interface MetaDataResult {
-  metaData: any;
+  url: string;
+  hasInputs: string[];
+  buttonClasses: string[];
+  // inputClasses: string[];
 }
 
 export interface Result {
   results: ScreenshotResult[];
-  // metaData: any;
 }
 
 export interface AnalyzedMetaData {
+  // Button classes have no period and can be appended directly to an element
   buttonClasses: string[];
+  // inputClasses: string[];
 }

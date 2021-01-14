@@ -1,4 +1,5 @@
 import http from 'http';
+import puppeteer from 'puppeteer';
 
 import { AppArgs } from './models/args';
 
@@ -61,4 +62,59 @@ export const xhrGet = (url: string): Promise<boolean> => {
 export const exitWithError = (err: string) => {
   console.error(err);
   process.exit(0);
+};
+
+/**
+ * Read all properties from element.
+ * Example - get all classes from <button> elements on the page:
+ * mapAllElementValues('button', 'className');
+ */
+export const allPropsForElement = async (
+  page: puppeteer.Page,
+  element: string,
+  prop = 'className',
+): Promise<string[]> => {
+  const elements = await page.$$(element);
+  const props = await Promise.all(elements.map(el => el.getProperty(prop)));
+  return (await Promise.all(props.map(p => p.jsonValue()))) as string[];
+};
+
+/**
+ * Comment.
+ */
+export const getElementClassCounts = (classes: string[][]) => {
+  // Map of the amount of times a button class recurs
+  const classCountMap = classes.reduce((a, b) => {
+    if (!b.length) {
+      return a;
+    }
+    // Because the classes can be as:
+    // ["class list-1", "class list-2", "class etc..."]
+    // or simply:
+    // ["class"]
+    b.join(' ')
+      .split(' ')
+      .forEach(c => (c in a ? ++a[c] : (a[c] = 1)));
+    return a;
+  }, {} as { [key: string]: number });
+
+  console.log(classCountMap);
+
+  // Order items by highest recurrence
+  let result = Object.keys(classCountMap).sort((a, b) =>
+    classCountMap[a] > classCountMap[b] ? -1 : 1,
+  );
+
+  // Remove classes that are not derived from base class, join base class with sub classes.
+  const baseClass = result[0];
+  const childClasses = result
+    .slice(1)
+    .filter(cls => cls.includes(baseClass))
+    .map(cls => `${baseClass} ${cls}`);
+
+  // const buttonClassNames = buttonClasses.map(
+  //   x => '.' + x.split(' ').join(' .'),
+  // );
+
+  return [baseClass, ...childClasses];
 };
