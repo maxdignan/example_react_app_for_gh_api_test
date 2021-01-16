@@ -5,6 +5,8 @@ import { compile } from 'handlebars';
 
 import { AnalyzedMetaData, MetaDataResult } from './models/screenshot-result';
 import { getElementClassCounts } from './util';
+import { Route } from './models/route';
+import { ProjectConfig } from './models/project-config';
 
 export class StlyeGuideBuilder {
   static fileName = 'style-guide.png';
@@ -96,45 +98,64 @@ export class StlyeGuideBuilder {
   }
 
   /**
+   * Get URL to visit for style guide injection.
+   * If the analyzed meta data contains an input element, use that URL.
+   * @todo: Can we prefer a URL in which we don't need wildcard params (/foo/:id)?
+   */
+  public getURLToVisit(
+    routes: Route[],
+    serverUrl: string,
+    config: ProjectConfig,
+  ): string {
+    let route: Route;
+
+    if (this.metaDataWithInputElement) {
+      // Custom input elements
+      const matchedRoute = routes.find(
+        r => r.url === this.metaDataWithInputElement.url,
+      );
+      route = matchedRoute;
+    } else {
+      // Normal input elements, use arbitrary route
+      route = routes[0];
+    }
+
+    return route.getFullUrl(serverUrl, config);
+  }
+
+  /**
    * Build HTML template on page using meta data.
    * @todo: Some research on the best output for this - we could do SVG/PDF or whatever
    */
   public async buildStyleGuide(page: puppeteer.Page) {
     console.log('style guide builder : building style guide :', this.metaData);
 
-    try {
-      // Support custom input groups
-      let customInputHTML: string;
-      if (this.metaDataWithInputElement) {
-        customInputHTML = await this.getCaustomInputHTML(page);
-      }
-
-      // Define custom variables transcluded in template html
-      const templateParams = {
-        ...this.metaData,
-        customInputHTML,
-      };
-
-      // Compile template
-      const html = await StlyeGuideBuilder.getStyleGuideHTML();
-      const compiledStyleGuideTemplate = compile(html)(templateParams);
-
-      // Place compiled html in host page
-      await page.evaluate(html => {
-        document.body.innerHTML = html;
-      }, compiledStyleGuideTemplate);
-
-      // Focus input elements
-      await page.focus('.focus input');
-
-      // Take shot
-      const path = join(this.pathToSaveImage, StlyeGuideBuilder.fileName);
-      await page.screenshot({ path, fullPage: true });
-
-      return true;
-    } catch (err) {
-      console.error(err);
-      return false;
+    // Support custom input groups
+    let customInputHTML: string;
+    if (this.metaDataWithInputElement) {
+      customInputHTML = await this.getCaustomInputHTML(page);
     }
+
+    // Define custom variables transcluded in template html
+    const templateParams = {
+      ...this.metaData,
+      customInputHTML,
+    };
+
+    // Compile template
+    const html = await StlyeGuideBuilder.getStyleGuideHTML();
+    const compiledStyleGuideTemplate = compile(html)(templateParams);
+
+    // Place compiled html in host page
+    await page.evaluate(html => {
+      document.body.innerHTML = html;
+    }, compiledStyleGuideTemplate);
+
+    // Focus input elements
+    await page.focus('.focus input');
+
+    // Take shot
+    const path = join(this.pathToSaveImage, StlyeGuideBuilder.fileName);
+    return await page.screenshot({ path, fullPage: true });
   }
 }

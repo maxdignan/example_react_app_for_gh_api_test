@@ -286,26 +286,16 @@ export class Browser {
 
       // Only reuse the first page - seems to work best with example NG app
       await page?.close();
+      await reusedPage.close();
 
       page = null;
     }
 
+    // Build style guide after all route visits.
     try {
-      // THIS SHOULD BE HANDLED IN STYLE GUIDE BUILDER!`1~
       const sgb = await new StlyeGuideBuilder({ metaData, path });
       const page = await browser.newPage();
-      let url: string;
-      if (sgb.metaDataWithInputElement) {
-        // Custom input elements
-        const route = routes.find(
-          r => r.url === sgb.metaDataWithInputElement.url,
-        );
-        // Can we prefer a URL in which we don't need wildcard params (/foo/:id)?
-        url = route.getFullUrl(serverUrl, config);
-      } else {
-        // Normal input elements
-        url = routes[0].getFullUrl(serverUrl, config);
-      }
+      const url = sgb.getURLToVisit(routes, serverUrl, config);
       await page.goto(url, { waitUntil: ['load'] });
       await sgb.buildStyleGuide(page);
       await page.close();
@@ -314,11 +304,10 @@ export class Browser {
     }
 
     await browser.close();
-    console.log('browser : done');
+    console.log('browser : closed');
 
     // Might not need to return meta data anymore.
-    const result = { results };
-    return result;
+    return { results };
   }
 
   /**
