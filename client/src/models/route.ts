@@ -5,7 +5,7 @@ interface RouteInterface {
 }
 
 export class Route implements RouteInterface {
-  url: string;
+  readonly url: string;
 
   /**
    * Create file name from full URL.

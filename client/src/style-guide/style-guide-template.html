@@ -1,7 +1,4 @@
 <style>
-  body {
-    padding: 0;
-  }
   section {
     display: flex;
   }
@@ -26,6 +23,18 @@
   }
   section-content > div > div {
     margin-bottom: 10px;
+  }
+  .flex {
+    display: flex;
+  }
+  .col {
+    margin-right: 1em;
+  }
+  color-swatch {
+    width: 140px;
+    height: 140px;
+    display: block;
+    font-size: 11px;
   }
 </style>
 
@@ -123,19 +132,54 @@
   </section-group>
   <section-group large-margin>
     <section-head>Buttons</section-head>
-    <!-- @todo: Show states like hover, focus, etc. -->
+    <!-- @todo: Show states like hover, active, etc. -->
     <section-content>
+      {{#each buttonClasses}}
       <div>
-        <div>.btn</div>
-        <button class="btn">Button</button>
+        <div>Classes: <kbd>{{this}}</kbd></div>
+        <button class="{{this}}">Button</button>
       </div>
-      <div>
-        <div>.btn .btn-secondary</div>
-        <button class="btn btn-secondary">Button</button>
+      {{/each}}
+    </section-content>
+  </section-group>
+</section>
+
+<section>
+  <section-group>
+    <section-head>
+      Inputs
+    </section-head>
+    <section-content>
+      <div class="flex">
+        <div class="col">
+          <div>Text Input</div>
+          {{#if customInputHTML}} {{{customInputHTML}}} {{else}}
+          <input type="text" />
+          {{/if}}
+        </div>
+        <div class="focus">
+          <div>Focus</div>
+          {{#if customInputHTML}} {{{customInputHTML}}} {{else}}
+          <input type="text" />
+          {{/if}}
+        </div>
       </div>
-      <div>
-        <div>.btn .btn-md</div>
-        <button class="btn btn-md">Button</button>
+    </section-content>
+  </section-group>
+</section>
+
+<section>
+  <section-group>
+    <section-head>Colors</section-head>
+    <section-content style="width: 100%;">
+      <div class="flex">
+        {{#each colors}}
+        <div>
+          <color-swatch style="background-color: {{this}}">
+            <span>{{this}}</span>
+          </color-swatch>
+        </div>
+        {{/each}}
       </div>
     </section-content>
   </section-group>

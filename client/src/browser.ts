@@ -1,7 +1,4 @@
 import puppeteer, { LaunchOptions } from 'puppeteer';
-import { join } from 'path';
-import { compile } from 'handlebars';
-import * as fs from 'fs';
 
 import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
@@ -9,10 +6,14 @@ import {
   ScreenshotResult,
   MetaDataResult,
   Result,
-  AnalyzedMetaData,
 } from './models/screenshot-result';
-import { exitWithError } from './util';
+import {
+  exitWithError,
+  allPropsForElement,
+  getAllColorsInStyleSheets,
+} from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
+import { StlyeGuideBuilder } from './style-guide-builder';
 import * as fromPlugins from './plugins';
 
 export class Browser {
@@ -242,7 +243,8 @@ export class Browser {
     }
 
     // Go through every route and take a shot
-    for (const [index, route] of routes.entries()) {
+    for (const route of routes) {
+      /** @todo: We should be closing this page. */
       // const reusedPage = page || (await browser.newPage());
       const reusedPage = await browser.newPage();
 
@@ -286,29 +288,34 @@ export class Browser {
       results.push(await this.visitRoute(params));
       metaData.push(await this.collectMetaData(params));
 
-      // Build style guide on last iteration
-      if (index === routes.length - 1) {
-        const analyzedMetaData = await this.analyzeMetaData(metaData);
-        await this.buildStyleGuide(analyzedMetaData, reusedPage, path);
-      }
-
       // Only reuse the first page - seems to work best with example NG app
       await page?.close();
+      await reusedPage.close();
 
       page = null;
     }
 
+    // Build style guide after all route visits.
+    try {
+      const sgb = await new StlyeGuideBuilder({ metaData, path });
+      const page = await browser.newPage();
+      const url = sgb.getURLToVisit(routes, serverUrl, config);
+      await page.goto(url, { waitUntil: ['load'] });
+      await sgb.buildStyleGuide(page);
+      await page.close();
+    } catch (err) {
+      console.error(err);
+    }
+
     await browser.close();
-    console.log('browser : done');
+    console.log('browser : closed');
 
     // Might not need to return meta data anymore.
-    const result = { results };
-    return result;
+    return { results };
   }
 
   /**
    * Get all enabled plugins for this project. Defaults to all for now.
-   * @todo: Allow user to configure.
    */
   private getPlugins() {
     const allPlugins: Plugin<unknown>[] = [
@@ -332,47 +339,6 @@ export class Browser {
     return pluginResults;
   }
 
-  private async getStyleGuideHTML(): Promise<string> {
-    let content: string;
-    const path = 'src/style-guide/style-guide-template.html';
-    try {
-      content = await fs.promises.readFile(path, 'utf-8');
-    } catch (err) {
-      console.error(err);
-    }
-    return content;
-  }
-
-  /**
-   * Build HTML template on page using meta data.
-   * @todo: Some research on the best output for this - we could do SVG/PDF or whatever
-   */
-  private async buildStyleGuide(
-    metaData: AnalyzedMetaData,
-    page: puppeteer.Page,
-    path: string,
-  ) {
-    console.log('browser : building style guide at :', path);
-    try {
-      const templateParams = {};
-      const html = await this.getStyleGuideHTML();
-      const compiledStyleGuideTemplate = compile(html)(templateParams);
-
-      console.log(compiledStyleGuideTemplate);
-
-      await page.evaluate(html => {
-        document.body.innerHTML = html;
-      }, compiledStyleGuideTemplate);
-
-      const fileName = 'style-guide.png';
-      await page.screenshot({ path: join(path, fileName), fullPage: true });
-      return true;
-    } catch (err) {
-      console.error(err);
-      return false;
-    }
-  }
-
   /**
    * Collect arbitrary data on each route visit.
    */
@@ -383,69 +349,31 @@ export class Browser {
     path: string;
     page: puppeteer.Page;
   }): Promise<MetaDataResult> {
-    // console.log('browser : collecting metadata on route :', params.route.url);
-
     let buttonClasses: string[] = [];
+    let colors: string[] = [];
+    // let inputClasses: string[] = [];
 
-    // For button classes proof-of-concept
+    const hasInputs = await params.page.$$('input');
+
     try {
-      const buttons = await params.page.$$('button');
-      const classNames = await Promise.all(
-        buttons.map(button => button.getProperty('className')),
-      );
-      buttonClasses = (await Promise.all(
-        classNames.map(c => c.jsonValue()),
-      )) as string[];
+      buttonClasses = await allPropsForElement(params.page, 'button');
+      colors = await getAllColorsInStyleSheets(params.page);
+      // inputClasses = await allPropsForElement(
+      //   params.page,
+      //   'input[type="text"]',
+      // );
     } catch (err) {
       console.log(err);
     }
 
-    const metaData = { buttonClasses };
-
-    return { metaData };
-  }
-
-  private analyzeMetaData(metaData: any[]): AnalyzedMetaData {
-    // console.log('browser : analyze meta data');
-
-    // Deserialize route metadata for this one-off example
-    const buttonClasses: string[][] = metaData.map(({ metaData }) => {
-      const { buttonClasses } = metaData;
-      return buttonClasses;
-    });
-
-    // Map of the amount of times a button class recurs
-    const buttonClassCountMap = buttonClasses.reduce((a, b) => {
-      if (!b.length) {
-        return a;
-      }
-      // Because the classes can be as:
-      // ["class list-1", "class list-2", "class etc..."]
-      // or simply:
-      // ["class"]
-      b.join(' ')
-        .split(' ')
-        .forEach(c => (c in a ? ++a[c] : (a[c] = 1)));
-      return a;
-    }, {} as { [key: string]: number });
-
-    // Order items by highest recurrence
-    let mostUsedButtonClasses = Object.keys(buttonClassCountMap).sort((a, b) =>
-      buttonClassCountMap[a] > buttonClassCountMap[b] ? -1 : 1,
-    );
-
-    // Remove classes that are not derived from base class, join base class with sub classes.
-    const baseClass = mostUsedButtonClasses[0];
-    const childClasses = mostUsedButtonClasses
-      .slice(1)
-      .filter(cls => cls.includes(baseClass))
-      .map(cls => `${baseClass} ${cls}`);
-
-    mostUsedButtonClasses = [baseClass, ...childClasses];
-
-    // console.log('button classes', mostUsedButtonClasses);
-    return {
-      buttonClasses: mostUsedButtonClasses,
+    const metaData: MetaDataResult = {
+      url: params.route.url,
+      hasInputs: hasInputs.length ? ['input'] : [],
+      buttonClasses,
+      colors,
+      // inputClasses,
     };
+
+    return metaData;
   }
 }

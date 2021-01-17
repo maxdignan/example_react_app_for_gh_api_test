@@ -18,7 +18,7 @@ export interface ProjectConfigInterface {
 
 export class ProjectConfig {
   /** Defaults */
-  static defaultLimit = 10;
+  static defaultLimit = 6;
   static defaultDir = '.emtrey_tmp';
   static defaultLoginUrl = 'login';
 
