@@ -56,19 +56,31 @@ export class StlyeGuideBuilder {
     const buttonClasses = getElementClassCounts(
       metaData.map(m => m.buttonClasses),
     );
+
+    const colorMap = metaData
+      .flatMap(m => m.colors)
+      .reduce(
+        (a, b) => (a[b] ? a[b]++ : (a[b] = 1)) && a,
+        {} as { [key: string]: number },
+      );
+
+    const colors = Object.keys(colorMap)
+      .sort((a, b) => (colorMap[a] > colorMap[b] ? -1 : 1))
+      // Only get the first N colors
+      .slice(0, 10)
+      .map(key => key);
+
     // const inputClasses = getElementClassCounts(
     //   metaData.map(m => m.inputClasses),
     // );
-
-    // console.log('button classes', buttonClasses);
     // console.log('input classes', inputClasses);
 
     const analyzed: AnalyzedMetaData = {
       buttonClasses,
-      // inputClasses,
+      colors,
     };
 
-    console.log('style guide : analyzed metadata :', analyzed);
+    // console.log('style guide : analyzed metadata :', analyzed);
 
     return analyzed;
   }
@@ -77,10 +89,10 @@ export class StlyeGuideBuilder {
    * Formats and returns custom input html and label.
    */
   private async getCaustomInputHTML(page: puppeteer.Page): Promise<string> {
-    console.log(
-      'style guide builder : enhanced input :',
-      this.metaDataWithInputElement,
-    );
+    // console.log(
+    //   'style guide builder : enhanced input :',
+    //   this.metaDataWithInputElement,
+    // );
     const html: string = await page.$eval('input', input => {
       input.setAttribute('value', 'Text');
       input.setAttribute('placehodler', 'Placeholder');

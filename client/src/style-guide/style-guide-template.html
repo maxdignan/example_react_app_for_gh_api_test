@@ -30,6 +30,12 @@
   .col {
     margin-right: 1em;
   }
+  color-swatch {
+    width: 140px;
+    height: 140px;
+    display: block;
+    font-size: 11px;
+  }
 </style>
 
 <section>
@@ -157,6 +163,23 @@
           <input type="text" />
           {{/if}}
         </div>
+      </div>
+    </section-content>
+  </section-group>
+</section>
+
+<section>
+  <section-group>
+    <section-head>Colors</section-head>
+    <section-content style="width: 100%;">
+      <div class="flex">
+        {{#each colors}}
+        <div>
+          <color-swatch style="background-color: {{this}}">
+            <span>{{this}}</span>
+          </color-swatch>
+        </div>
+        {{/each}}
       </div>
     </section-content>
   </section-group>

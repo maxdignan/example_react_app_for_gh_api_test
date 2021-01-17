@@ -7,7 +7,11 @@ import {
   MetaDataResult,
   Result,
 } from './models/screenshot-result';
-import { exitWithError, allPropsForElement } from './util';
+import {
+  exitWithError,
+  allPropsForElement,
+  getAllColorsInStyleSheets,
+} from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
 import { StlyeGuideBuilder } from './style-guide-builder';
 import * as fromPlugins from './plugins';
@@ -346,12 +350,14 @@ export class Browser {
     page: puppeteer.Page;
   }): Promise<MetaDataResult> {
     let buttonClasses: string[] = [];
+    let colors: string[] = [];
     // let inputClasses: string[] = [];
 
     const hasInputs = await params.page.$$('input');
 
     try {
       buttonClasses = await allPropsForElement(params.page, 'button');
+      colors = await getAllColorsInStyleSheets(params.page);
       // inputClasses = await allPropsForElement(
       //   params.page,
       //   'input[type="text"]',
@@ -364,6 +370,7 @@ export class Browser {
       url: params.route.url,
       hasInputs: hasInputs.length ? ['input'] : [],
       buttonClasses,
+      colors,
       // inputClasses,
     };
 
