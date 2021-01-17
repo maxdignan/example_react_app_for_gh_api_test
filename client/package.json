@@ -5,7 +5,6 @@
   "scripts": {
     "start": "npm run build-ts && npm run serve",
     "build": "rm -rf ./dist && npm run build-ts",
-    "serve": "node dist/app.js --url=http://localhost:4400 --dir=/Users/brad/h2/glassy --app=glassy",
     "watch-node": "nodemon dist/server.js",
     "test": "jest --forceExit --coverage --verbose",
     "watch-test": "npm run test -- --watchAll",
