@@ -68,16 +68,8 @@ export class ComponentScreenShotPlugin extends Plugin<any> {
       try {
         const [, xpath] = data.cls.split('::');
         const component = (await page.$x(xpath))[0];
-        // const boundingBox = await component.boundingBox();
         await component.screenshot({
           path,
-          // Adding clip is causing the image to cut off - bug with Puppeteer?
-          // clip: {
-          //   x: boundingBox.x,
-          //   y: boundingBox.y,
-          //   width: boundingBox.width,
-          //   height: boundingBox.height,
-          // },
         });
       } catch (err) {
         exitWithError(err);

@@ -322,7 +322,7 @@ export class Browser {
       // new fromPlugins.PageTitlePlugin(),
       // new fromPlugins.MetricsPlugin(),
       // new fromPlugins.PageScreenShotPlugin(),
-      // new fromPlugins.ComponentScreenShotPlugin(),
+      new fromPlugins.ComponentScreenShotPlugin(),
     ];
     return allPlugins;
   }
@@ -358,10 +358,6 @@ export class Browser {
     try {
       buttonClasses = await allPropsForElement(params.page, 'button');
       colors = await getAllColorsInStyleSheets(params.page);
-      // inputClasses = await allPropsForElement(
-      //   params.page,
-      //   'input[type="text"]',
-      // );
     } catch (err) {
       console.log(err);
     }
@@ -371,7 +367,6 @@ export class Browser {
       hasInputs: hasInputs.length ? ['input'] : [],
       buttonClasses,
       colors,
-      // inputClasses,
     };
 
     return metaData;
