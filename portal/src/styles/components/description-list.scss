@@ -1,9 +1,0 @@
-dl {
-  @apply flex flex-wrap;
-  > dt {
-    @apply w-1/2;
-  }
-  > dd {
-    @apply w-1/2 text-right font-bold;
-  }
-}
