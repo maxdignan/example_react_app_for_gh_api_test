@@ -5,14 +5,12 @@
   "scripts": {
     "start": "npm run build-ts && npm run serve",
     "build": "rm -rf ./dist && npm run build-ts",
-    "watch-node": "nodemon dist/server.js",
     "test": "jest --forceExit --coverage --verbose",
     "watch-test": "npm run test -- --watchAll",
     "build-ts": "tsc",
     "watch-ts": "tsc -w",
     "lint": "tsc --noEmit && eslint \"**/*.{js,ts}\" --quiet --fix",
-    "debug": "npm run build && npm run watch-debug",
-    "serve-debug": "nodemon --inspect dist/server.js"
+    "debug": "npm run build && npm run watch-debug"
   },
   "dependencies": {
     "form-data": "^3.0.0",
