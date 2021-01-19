@@ -1,6 +1,6 @@
 {
-  "name": "aat-client",
-  "version": "0.0.0",
+  "name": "emtrey-client",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
     "start": "npm run build-ts && npm run serve",
