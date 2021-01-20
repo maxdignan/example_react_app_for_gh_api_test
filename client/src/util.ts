@@ -53,6 +53,7 @@ export const uniqueArrayBy = <T>(key: string, arr: T[]): T[] =>
 
 /**
  * Promisified wrapper around http get.
+ * @deprecated
  */
 export const xhrGet = (url: string): Promise<boolean> => {
   return new Promise((resolve, reject) => {

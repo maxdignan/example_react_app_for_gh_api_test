@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, rmdir } from 'fs';
 import { request } from 'http';
+import { get } from 'https';
 import FormData from 'form-data';
 import { exec } from 'child_process';
 import { join } from 'path';
@@ -14,11 +15,13 @@ import { Browser } from './browser';
 import { exitWithError, getArgs, xhrGet } from './util';
 import { FrameworkParser } from './framework-parser';
 import { Framework, ParserConfig } from './models/parser';
+import { httpsGet } from './http-utils';
 
 console.time('run');
 
 class App {
   private branchName: string;
+  private projectConfig: ProjectConfig;
 
   constructor(private args: Partial<AppArgs>) {
     // console.log('app : args :', args);
@@ -101,7 +104,7 @@ class App {
    * Gather all routes and navigate to URLs to take screenshots.
    */
   public async run() {
-    // Get project parser config
+    // Get parser config from user's project
     let parserConfig: ParserConfig;
     try {
       parserConfig = await this.getParserConfig();
@@ -109,20 +112,9 @@ class App {
       exitWithError(`Could not locate parser config, error: ${err}`);
     }
 
-    // Get emtrey config
-    let projectConfig: ProjectConfig | undefined;
-
-    try {
-      projectConfig = await this.readProjectConfig(this.args.dir);
-    } catch (err) {
-      console.log('app : could not locate project config');
-    }
-
-    // Prepare fs if project has config
-    const path = await this.prepareScreenshotDirectory(
-      projectConfig,
-      this.args.dir,
-    );
+    // Get emtrey config from user's project
+    const projectConfig = await this.readProjectConfig(this.args.dir);
+    this.setProjectConfig(projectConfig);
 
     // Sniff out all project routes based on config
     const routes = await new URLParser(parserConfig).getRoutes(this.args.dir);
@@ -130,9 +122,11 @@ class App {
     // Check localhost. @todo: Support skipping this.
     await this.confirmProjectIsRunning(this.args.url, routes[0]);
 
+    // Prepare fs if project has config
+    const path = await this.prepareScreenshotDirectory(this.args.dir);
+
     // Browse to routes and execute plugins
     const browser = new Browser();
-
     const results = await browser.visitRoutes(
       routes,
       this.args.url,
@@ -165,8 +159,61 @@ class App {
     console.timeEnd('run');
   }
 
+  private setProjectConfig(config: ProjectConfig) {
+    this.projectConfig = config;
+  }
+
+  /**
+   * Remove any old screenshots, create directory to house images.
+   */
+  private async prepareScreenshotDirectory(dir: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const path = join(dir, this.projectConfig.outputDirectory);
+      if (!existsSync(path)) {
+        console.log('app : creating screenshot directory :', path);
+        try {
+          mkdirSync(path);
+        } catch (err) {
+          reject(err);
+        }
+        resolve(path);
+      } else {
+        // If you want to skip emptying the dir
+        // resolve(path);
+        rimraf.default(`${path}/*`, {}, err => {
+          if (err) {
+            return reject(err);
+          }
+          // console.log('app : screenshot directory emptied :', path);
+          resolve(path);
+        });
+      }
+    });
+  }
+
+  private async cleanup(dir: string) {
+    return new Promise((resolve, reject) => {
+      console.log('app : cleaning up dir :', dir);
+      rmdir(dir, { recursive: true }, err => {
+        if (err) {
+          return reject(err);
+        }
+        resolve(null);
+      });
+    });
+  }
+
+  /**
+   * Hits API to get a session token.
+   */
+  private async httpGenerateSessionToken(): Promise<string> {
+    const url = `${this.projectConfig.apiURL}/api/user/generate-raw-api-session`;
+    return httpsGet<{ token: string }>(url).then(res => res.token);
+  }
+
   /**
    * Build API payload.
+   * @deprecated
    */
   private async submitResults(
     results: ScreenshotResult[],
@@ -202,6 +249,7 @@ class App {
 
   /**
    * Handle transmission of form data to API.
+   * @deprecated
    */
   private async postResults(form: FormData, config: ProjectConfig) {
     return new Promise((resolve, reject) => {
@@ -221,48 +269,6 @@ class App {
       });
 
       form.pipe(req);
-    });
-  }
-
-  /**
-   * Remove any old screenshots, create directory to house images.
-   */
-  private async prepareScreenshotDirectory(
-    config: ProjectConfig | undefined,
-    dir: string,
-  ): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const path = join(dir, config.outputDirectory);
-      if (!existsSync(path)) {
-        console.log('app : creating screenshot directory :', path);
-        try {
-          mkdirSync(path);
-        } catch (err) {
-          reject(err);
-        }
-        resolve(path);
-      } else {
-        resolve(path);
-        rimraf.default(`${path}/*`, {}, err => {
-          if (err) {
-            return reject(err);
-          }
-          console.log('app : screenshot directory emptied :', path);
-          resolve(path);
-        });
-      }
-    });
-  }
-
-  private async cleanup(dir: string) {
-    return new Promise((resolve, reject) => {
-      console.log('app : cleaning up dir :', dir);
-      rmdir(dir, { recursive: true }, err => {
-        if (err) {
-          return reject(err);
-        }
-        resolve(null);
-      });
     });
   }
 }
