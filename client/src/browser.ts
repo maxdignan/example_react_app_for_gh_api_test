@@ -91,7 +91,7 @@ export class Browser {
     }
 
     // Credentials have been supplied, find input fields and set values.
-    if (config.login.user && config.login.password) {
+    if (config.login?.user && config.login?.password) {
       await this.fillInLoginForm(page, config);
     }
 
@@ -206,8 +206,8 @@ export class Browser {
 
     // Limit max amount of shots
     if (config.limit) {
-      console.log(`browser : limiting routes to ${config.limit}`);
-      routes = routes.slice(0, config.limit);
+      // console.log(`browser : limiting routes to ${config.limit}`);
+      // routes = routes.slice(0, config.limit);
     }
 
     let page: puppeteer.Page;
@@ -218,6 +218,7 @@ export class Browser {
 
     // Some route needs to auth, lets auth first then go take shots.
     const willAuth = routes.some(r => config.willAuthorizeURL(r.url));
+    console.log('browser : will auth :', willAuth);
 
     if (!this.authorized && willAuth) {
       // Hit the login route first to capture unauthorized/login view.
@@ -254,7 +255,9 @@ export class Browser {
         continue;
       }
 
-      await this.authorize(reusedPage, serverUrl, config);
+      if (willAuth) {
+        await this.authorize(reusedPage, serverUrl, config);
+      }
 
       const params = {
         route,
@@ -298,9 +301,9 @@ export class Browser {
    */
   private getPlugins() {
     const allPlugins: Plugin<unknown>[] = [
-      // new fromPlugins.PageTitlePlugin(),
-      // new fromPlugins.MetricsPlugin(),
-      // new fromPlugins.PageScreenShotPlugin(),
+      new fromPlugins.PageTitlePlugin(),
+      new fromPlugins.MetricsPlugin(),
+      new fromPlugins.PageScreenShotPlugin(),
       new fromPlugins.ComponentScreenShotPlugin(),
     ];
     return allPlugins;

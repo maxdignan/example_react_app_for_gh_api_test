@@ -59,8 +59,8 @@ class App {
       config = ProjectConfig.fromFile(fileContent);
       // console.log('app : loaded project config :', config);
     } catch (err) {
-      config = new ProjectConfig({});
-      console.log(`app : could not load config at ${file}`);
+      config = ProjectConfig.createBlank();
+      console.log(`app : could not load project config at ${file}`);
     }
     return config;
   }

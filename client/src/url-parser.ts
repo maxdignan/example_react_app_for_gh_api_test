@@ -103,12 +103,10 @@ export class URLParser {
   /**
    * Parse angular route files into route blocks.
    */
-  private parseAngularRouteBlocks(
-    blocks: string[],
-    routes: Route[] = [],
-  ): Route[] {
+  private parseAngularRoutes(blocks: string[], routes: Route[] = []): Route[] {
     let currentPath: string;
-    blocks.forEach(block => {
+
+    for (const block of blocks) {
       const pathBlocks: string[] = block.match(/path:\s.+/gi);
       const paths = pathBlocks.map(b => b.replace(/\'|\"|path:\s|,/g, ''));
       const [path] = paths;
@@ -117,15 +115,15 @@ export class URLParser {
         if (block.includes('children:')) {
           // Child paths exist, recurse
           currentPath = path;
-          this.parseAngularRouteBlocks(pathBlocks, routes);
+          this.parseAngularRoutes(pathBlocks, routes);
         } else {
           // No child paths, push current
           const url = currentPath ? `${currentPath}/${path}` : path;
-          const route = new Route({ url });
-          routes.push(route);
+          routes.push(Route.fromURL(url));
         }
       }
-    });
+    }
+
     return routes;
   }
 
@@ -134,22 +132,24 @@ export class URLParser {
    */
   private async parseAngularRouter(path: string): Promise<Route[]> {
     const fileContent = await fs.promises.readFile(path, 'utf-8');
-    const routeBlocks: string[] = fileContent
+    const routes: string[] = fileContent
       .split(/{(\n|\r)+/)
       .filter(p => p.includes('path:'));
-    return this.parseAngularRouteBlocks(routeBlocks);
+    return this.parseAngularRoutes(routes);
   }
 
   /**
    * Parse react route files into route blocks.
    */
-  private parseReactRouteBlocks(
-    blocks: string[],
-    routes: Route[] = [],
-  ): Route[] {
-    console.log('url parser : parse react route blocks :', blocks);
-    const r: Route[] = [];
-    return r;
+  private parseReactRoutes(paths: string[], routes: Route[] = []): Route[] {
+    for (const path of paths) {
+      // Cannot be wildcard
+      if (path === '*') {
+        continue;
+      }
+      routes.push(Route.fromURL(path));
+    }
+    return routes;
   }
 
   /**
@@ -181,10 +181,10 @@ export class URLParser {
 
     // Narrow attributes down to final array
     // Example: ["/", "/projects", "/project/:projectId", "/about", "*"]
-    const paths = pathAttributes.map(p =>
-      p.split('=').pop().replace(/\"/g, ''),
-    );
+    const paths = pathAttributes
+      .map(p => p.split('=').pop().replace(/\"/g, ''))
+      .filter(p => !!p);
 
-    return this.parseReactRouteBlocks(paths);
+    return this.parseReactRoutes(paths);
   }
 }

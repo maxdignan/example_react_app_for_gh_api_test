@@ -39,7 +39,11 @@ export class ProjectConfig {
     return new ProjectConfig(file);
   }
 
-  constructor(public config: Partial<ProjectConfigInterface>) {
+  static createBlank(): ProjectConfig {
+    return new ProjectConfig({ routes: {} });
+  }
+
+  constructor(public config?: Partial<ProjectConfigInterface>) {
     this.outputDirectory = config.outputDirectory || ProjectConfig.defaultDir;
     this.limit = config.limit || ProjectConfig.defaultLimit;
   }
@@ -56,7 +60,7 @@ export class ProjectConfig {
    * Get config URL or fallback to default.
    */
   public getLoginUrl(): string {
-    return this.login.url || ProjectConfig.defaultLoginUrl;
+    return this.login?.url || ProjectConfig.defaultLoginUrl;
   }
 
   /**
@@ -70,14 +74,15 @@ export class ProjectConfig {
    * Get the wildcard config which servers as a base for all routes.
    */
   public getRouteWildcardConfig() {
-    return this.config.routes['*'];
+    const routes = this.config.routes;
+    return routes ? this.config.routes['*'] : {};
   }
 
   /**
    * Does this config block contain `{ auth: true }`?
    */
   private willConfigAuth(config: { auth: boolean }): boolean {
-    return config.auth === true;
+    return config?.auth === true;
   }
 
   /**

@@ -17,6 +17,14 @@ export class Route implements RouteInterface {
     return parts.pop();
   }
 
+  static fromURL(url: string): Route {
+    // Remove any starting slashes because the server URL may end with `/`
+    if (url.startsWith('/')) {
+      url = url.replace('/', '');
+    }
+    return new Route({ url });
+  }
+
   constructor(data: RouteInterface) {
     this.url = data.url;
   }
