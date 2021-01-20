@@ -1,4 +1,4 @@
-import { createReadStream, existsSync, mkdirSync, rmdir } from 'fs';
+import { existsSync, mkdirSync, rmdir } from 'fs';
 import { request } from 'http';
 import FormData from 'form-data';
 import { exec } from 'child_process';
@@ -15,11 +15,12 @@ import { exitWithError, getArgs, xhrGet } from './util';
 import { FrameworkParser } from './framework-parser';
 import { Framework, ParserConfig } from './models/parser';
 
+console.time('run');
+
 class App {
   private branchName: string;
 
   constructor(private args: Partial<AppArgs>) {
-    console.time('run');
     // console.log('app : args :', args);
     // this.setBranchName();
   }
@@ -34,7 +35,7 @@ class App {
       {
         cwd: this.args.dir,
       },
-      (err: any, stdout: string, stderr: any) => {
+      (err: Error, stdout: string, stderr: string) => {
         console.timeEnd('git');
         if (err || stderr) {
           // throw new Error(err || stderr);
@@ -48,7 +49,7 @@ class App {
   }
 
   /**
-   * Look for an ART project config file in the source directory.
+   * Look for an emtrey project config file in the source directory.
    */
   private async readProjectConfig(projectUrl: string): Promise<ProjectConfig> {
     const file = `${projectUrl}/emtrey.config.js`;
@@ -58,6 +59,7 @@ class App {
       config = ProjectConfig.fromFile(fileContent);
       // console.log('app : loaded project config :', config);
     } catch (err) {
+      config = new ProjectConfig({});
       console.log(`app : could not load config at ${file}`);
     }
     return config;
@@ -108,14 +110,15 @@ class App {
     }
 
     // Get emtrey config
-    let projectConfig: ProjectConfig;
+    let projectConfig: ProjectConfig | undefined;
+
     try {
       projectConfig = await this.readProjectConfig(this.args.dir);
     } catch (err) {
       console.log('app : could not locate project config');
     }
 
-    // Prepare fs
+    // Prepare fs if project has config
     const path = await this.prepareScreenshotDirectory(
       projectConfig,
       this.args.dir,
@@ -137,7 +140,10 @@ class App {
       projectConfig,
     );
 
-    // console.log('browser : run : final results :', results);
+    console.log('--');
+    console.log('app : run : final results :');
+    console.log(results);
+    console.log('--');
 
     // Post data to server.
     // try {
@@ -222,7 +228,7 @@ class App {
    * Remove any old screenshots, create directory to house images.
    */
   private async prepareScreenshotDirectory(
-    config: ProjectConfig,
+    config: ProjectConfig | undefined,
     dir: string,
   ): Promise<string> {
     return new Promise((resolve, reject) => {

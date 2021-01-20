@@ -256,27 +256,6 @@ export class Browser {
 
       await this.authorize(reusedPage, serverUrl, config);
 
-      // Testing. Seems we cannot catch error messages from thrown errors; at least in NG.
-      // reusedPage.on('console', e => {
-      //   if (e.type().toLowerCase() === 'error') {
-      //     console.log(
-      //       'page : console error : ' + e.args(),
-      //       e.location(),
-      //       e.text(),
-      //     );
-      //   }
-      // });
-
-      // Testing, we can definitely make use of this.
-      // reusedPage.on('requestfailed', req => {
-      //   console.log(
-      //     'page : request failed :',
-      //     req.url(),
-      //     req.method(),
-      //     // req.response(),
-      //   );
-      // });
-
       const params = {
         route,
         serverUrl,

@@ -67,13 +67,7 @@ export class StlyeGuideBuilder {
     const colors = Object.keys(colorMap)
       .sort((a, b) => (colorMap[a] > colorMap[b] ? -1 : 1))
       // Only get the first N colors
-      .slice(0, 10)
-      .map(key => key);
-
-    // const inputClasses = getElementClassCounts(
-    //   metaData.map(m => m.inputClasses),
-    // );
-    // console.log('input classes', inputClasses);
+      .slice(0, 10);
 
     const analyzed: AnalyzedMetaData = {
       buttonClasses,
@@ -140,7 +134,7 @@ export class StlyeGuideBuilder {
    * @todo: Some research on the best output for this - we could do SVG/PDF or whatever
    */
   public async buildStyleGuide(page: puppeteer.Page) {
-    console.log('style guide builder : building style guide :', this.metaData);
+    // console.log('style guide builder : building style guide :', this.metaData);
 
     // Support custom input groups
     let customInputHTML: string;
