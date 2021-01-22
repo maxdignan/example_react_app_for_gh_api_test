@@ -19,35 +19,10 @@ console.clear();
 console.time('run');
 
 class App {
-  private branchName: string;
   private projectConfig: ProjectConfig;
 
   constructor(private args: Partial<AppArgs>) {
     // console.log('app : args :', args);
-    // this.setBranchName();
-  }
-
-  /**
-   * Execute git command in project directory to get current git branch.
-   */
-  private setBranchName() {
-    console.time('git');
-    exec(
-      'git rev-parse --abbrev-ref HEAD',
-      {
-        cwd: this.args.dir,
-      },
-      (err: Error, stdout: string, stderr: string) => {
-        console.timeEnd('git');
-        if (err || stderr) {
-          // throw new Error(err || stderr);
-          // Git may not be initialized, or no commit exists.
-          exitWithError('app : error finding git branch');
-        }
-        this.branchName = stdout.trim();
-        console.log('app : got git branch :', this.branchName);
-      },
-    );
   }
 
   /**
@@ -115,18 +90,6 @@ class App {
     const projectConfig = await this.readProjectConfig(this.args.dir);
     this.setProjectConfig(projectConfig);
 
-    try {
-      const httpClient = await this.initializeHttpClient();
-      const user = await httpClient.getUser();
-      console.log('http client : got user :', user);
-    } catch (err) {
-      console.log(err);
-    }
-
-    return setTimeout(() => {
-      process.exit(0);
-    }, 1000);
-
     // Sniff out all project routes based on config
     const routes = await new URLParser(parserConfig).getRoutes(this.args.dir);
 
@@ -145,10 +108,12 @@ class App {
       projectConfig,
     );
 
-    console.log('--');
-    console.log('app : run : final results :');
-    console.log(results);
-    console.log('--');
+    // console.log('--');
+    // console.log('app : run : final results :');
+    // console.log(results);
+    // console.log('--');
+
+    this.submitResults({ results, framework: parserConfig.framework });
 
     // Post data to server.
     // try {
@@ -202,6 +167,9 @@ class App {
     });
   }
 
+  /**
+   * Empty temp dir.
+   */
   private async cleanup(dir: string) {
     return new Promise((resolve, reject) => {
       console.log('app : cleaning up dir :', dir);
@@ -229,37 +197,63 @@ class App {
   }
 
   /**
-   * Build API payload.
-   * @deprecated
+   * Execute git command in project directory to get current git branch.
    */
-  private async submitResults(
-    results: ScreenshotResult[],
-    path: string,
-    projectConfig: ProjectConfig,
-    framework: Framework,
-  ): Promise<any> {
-    const form = new FormData();
+  private getGitBranchName(): Promise<string> {
+    return new Promise(resolve => {
+      console.time('git');
+      exec(
+        'git rev-parse --abbrev-ref HEAD',
+        {
+          cwd: this.args.dir,
+        },
+        (err: Error, stdout: string, stderr: string) => {
+          console.timeEnd('git');
+          if (err || stderr) {
+            // throw new Error(err || stderr);
+            // Git may not be initialized, or no commit exists.
+            exitWithError('app : error finding git branch');
+          }
+          const branch = stdout.trim();
+          console.log('app : got git branch :', branch);
+          resolve(branch);
+        },
+      );
+    });
+  }
 
-    form.append('branch', this.branchName);
-    form.append('app', this.args.app);
-    form.append('framework', framework);
+  /**
+   *
+   * Steps for submitting results to API.
+   *
+   * 1. Check if user has an Emtrey account
+   * -- YES: Auth this user to get token
+   * -- NO: Register new user to get token
+   *
+   * 2. With a user and token, does a project exist?
+   * -- YES: Use project by unique name
+   * -- NO: Create a new project
+   *
+   * 3. With a project, post a run-through. Success?
+   * -- YES: Continue
+   * -- NO: Fatal error - try again?
+   *
+   * 4. With the response URL from the run-through, post the screen shots. Success?
+   * -- YES: That's pretty much it
+   * -- NO: Fatal error - try again?
+   *
+   * 5. Drink a beer
+   *
+   */
+  private async submitResults(data: {
+    results: Result;
+    framework: Framework;
+  }): Promise<any> {
+    // Ensure API is up.
+    // const httpClient = await this.initializeHttpClient();
 
-    // Disabled while plugins are under development
-    // results.forEach(async result => {
-    //   const fileName = `${path}/${result.fileName}.png`;
-    //   const stream = createReadStream(fileName);
-    //   form.append('files[]', stream);
-    //   form.append('fileNames[]', result.fileName);
-    //   form.append('pageTitles[]', result.pageTitle);
-    //   form.append('metrics[]', JSON.stringify(result.metrics));
-    //   form.append('urls[]', result.url);
-    // });
-
-    console.log(
-      'app : submitting results :',
-      projectConfig.apiURL,
-      projectConfig.apiPort,
-    );
+    console.log('app : submit results :', data);
+    const branchName = await this.getGitBranchName();
 
     // return this.postResults(form, projectConfig);
     return null;

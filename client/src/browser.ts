@@ -206,8 +206,8 @@ export class Browser {
 
     // Limit max amount of shots
     if (config.limit) {
-      // console.log(`browser : limiting routes to ${config.limit}`);
-      // routes = routes.slice(0, config.limit);
+      console.log(`browser : limiting routes to ${config.limit}`);
+      routes = routes.slice(0, config.limit);
     }
 
     let page: puppeteer.Page;
@@ -301,10 +301,10 @@ export class Browser {
    */
   private getPlugins() {
     const allPlugins: Plugin<unknown>[] = [
-      new fromPlugins.PageTitlePlugin(),
-      new fromPlugins.MetricsPlugin(),
       new fromPlugins.PageScreenShotPlugin(),
-      new fromPlugins.ComponentScreenShotPlugin(),
+      // new fromPlugins.ComponentScreenShotPlugin(),
+      // new fromPlugins.PageTitlePlugin(),
+      // new fromPlugins.MetricsPlugin(),
     ];
     return allPlugins;
   }
