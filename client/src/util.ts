@@ -3,6 +3,8 @@ import puppeteer from 'puppeteer';
 
 import { AppArgs } from './models/args';
 
+export type Maybe<T> = T | null | undefined;
+
 /**
  * Strip non-unique values in array.
  */

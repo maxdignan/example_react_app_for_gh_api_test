@@ -29,7 +29,7 @@ export class ProjectConfig {
   limit: number;
 
   /** Location of API. */
-  apiURL = 'https://early-testing-emtrey.herokuapp.com';
+  apiURL = 'early-testing-emtrey.herokuapp.com';
   apiPort = 9000;
 
   /**

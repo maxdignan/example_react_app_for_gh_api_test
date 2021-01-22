@@ -1,6 +1,4 @@
-import { existsSync, mkdirSync, rmdir } from 'fs';
-import { request } from 'http';
-import { get } from 'https';
+import { createReadStream, existsSync, mkdirSync, rmdir } from 'fs';
 import FormData from 'form-data';
 import { exec } from 'child_process';
 import { join } from 'path';
@@ -15,8 +13,9 @@ import { Browser } from './browser';
 import { exitWithError, getArgs, xhrGet } from './util';
 import { FrameworkParser } from './framework-parser';
 import { Framework, ParserConfig } from './models/parser';
-import { httpsGet } from './http-utils';
+import { HttpClient } from './http-client';
 
+console.clear();
 console.time('run');
 
 class App {
@@ -116,6 +115,18 @@ class App {
     const projectConfig = await this.readProjectConfig(this.args.dir);
     this.setProjectConfig(projectConfig);
 
+    try {
+      const httpClient = await this.initializeHttpClient();
+      const user = await httpClient.getUser();
+      console.log('http client : got user :', user);
+    } catch (err) {
+      console.log(err);
+    }
+
+    return setTimeout(() => {
+      process.exit(0);
+    }, 1000);
+
     // Sniff out all project routes based on config
     const routes = await new URLParser(parserConfig).getRoutes(this.args.dir);
 
@@ -204,11 +215,17 @@ class App {
   }
 
   /**
-   * Hits API to get a session token.
+   * Creates new http client with token from API.
    */
-  private async httpGenerateSessionToken(): Promise<string> {
-    const url = `${this.projectConfig.apiURL}/api/user/generate-raw-api-session`;
-    return httpsGet<{ token: string }>(url).then(res => res.token);
+  private async initializeHttpClient(): Promise<HttpClient> {
+    let client: HttpClient;
+    try {
+      client = new HttpClient(this.projectConfig.apiURL);
+      await client.generateSessionToken();
+    } catch (err) {
+      exitWithError(err);
+    }
+    return client;
   }
 
   /**
@@ -220,7 +237,7 @@ class App {
     path: string,
     projectConfig: ProjectConfig,
     framework: Framework,
-  ) {
+  ): Promise<any> {
     const form = new FormData();
 
     form.append('branch', this.branchName);
@@ -244,32 +261,8 @@ class App {
       projectConfig.apiPort,
     );
 
-    return this.postResults(form, projectConfig);
-  }
-
-  /**
-   * Handle transmission of form data to API.
-   * @deprecated
-   */
-  private async postResults(form: FormData, config: ProjectConfig) {
-    return new Promise((resolve, reject) => {
-      const req = request({
-        hostname: config.apiURL,
-        port: config.apiPort,
-        path: '/api/vr',
-        method: 'POST',
-        headers: form.getHeaders(),
-      });
-
-      req.on('timeout', reject);
-
-      req.on('response', res => {
-        console.log('app : submission response :', res.statusCode);
-        res.statusCode === 200 ? resolve(null) : reject();
-      });
-
-      form.pipe(req);
-    });
+    // return this.postResults(form, projectConfig);
+    return null;
   }
 }
 
