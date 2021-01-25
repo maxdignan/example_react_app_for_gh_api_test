@@ -13,10 +13,17 @@ import {
   getAllColorsInStyleSheets,
 } from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
-import { StlyeGuideBuilder } from './style-guide-builder';
+import { StlyeGuideBuilder } from './style-guide/style-guide-builder';
 import * as fromPlugins from './plugins';
 
 export class Browser {
+  static enabledPlugins: Plugin<unknown>[] = [
+    new fromPlugins.PageScreenShotPlugin(),
+    // new fromPlugins.ComponentScreenShotPlugin(),
+    // new fromPlugins.PageTitlePlugin(),
+    // new fromPlugins.MetricsPlugin(),
+  ];
+
   private authorized = false;
   private launchConfig: LaunchOptions = {
     product: 'chrome', // Also firefox
@@ -43,7 +50,7 @@ export class Browser {
           el.dispatchEvent(new Event('change', options));
           return el.value;
         },
-        config.login.user,
+        config.login!.user,
       );
       const password = await page.$eval(
         'input[type="password"]',
@@ -55,7 +62,7 @@ export class Browser {
           el.dispatchEvent(new Event('change', options));
           return el.value;
         },
-        config.login.password,
+        config.login!.password,
       );
       console.log('browser : login form filled :', email + ' / ' + password);
       return true;
@@ -136,7 +143,7 @@ export class Browser {
     config: ProjectConfig;
     path: string;
     page: puppeteer.Page;
-  }): Promise<ScreenshotResult | null> {
+  }): Promise<ScreenshotResult> {
     const { route, serverUrl, config, path, page } = data;
 
     const url = route.getFullUrl(serverUrl, config);
@@ -152,7 +159,7 @@ export class Browser {
       const enabled = config.getURLProp(route.url, 'enabled');
       if (enabled === false) {
         console.log('browser : url is disabled :', url);
-        return null;
+        return {} as ScreenshotResult;
       }
       // Check for delay config
       const delay = config.getURLProp(route.url, 'delay');
@@ -210,7 +217,7 @@ export class Browser {
       routes = routes.slice(0, config.limit);
     }
 
-    let page: puppeteer.Page;
+    let page: puppeteer.Page | null;
     let hasVisitedLogin = false;
 
     const results: ScreenshotResult[] = [];
@@ -227,14 +234,15 @@ export class Browser {
         // New page for login route.
         page = await browser.newPage();
         // Go and snap login.
-        const loginResult = await this.visitRoute({
+        const loginResult = (await this.visitRoute({
           route: loginRoute,
           serverUrl,
           config,
           path,
           page,
-        });
-        hasVisitedLogin = results.push(loginResult) && true;
+        })) as ScreenshotResult;
+        results.push(loginResult);
+        hasVisitedLogin = true;
       }
       // Below goes to auth before navigating to other routes, but only once.
       // console.log('browser : authorize first');
@@ -271,7 +279,7 @@ export class Browser {
       metaData.push(await this.collectMetaData(params));
 
       // Only reuse the first page - seems to work best with example NG app
-      await page?.close();
+      await page!.close();
       await reusedPage.close();
 
       page = null;
@@ -300,13 +308,7 @@ export class Browser {
    * Get all enabled plugins for this project. Defaults to all for now.
    */
   private getPlugins() {
-    const allPlugins: Plugin<unknown>[] = [
-      new fromPlugins.PageScreenShotPlugin(),
-      // new fromPlugins.ComponentScreenShotPlugin(),
-      // new fromPlugins.PageTitlePlugin(),
-      // new fromPlugins.MetricsPlugin(),
-    ];
-    return allPlugins;
+    return Browser.enabledPlugins;
   }
 
   private async runPlugins(

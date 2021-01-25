@@ -1,19 +1,19 @@
-import { createReadStream, existsSync, mkdirSync, rmdir } from 'fs';
-import FormData from 'form-data';
+import { existsSync, mkdirSync, rmdir } from 'fs';
 import { exec } from 'child_process';
 import { join } from 'path';
 import * as rimraf from 'rimraf';
 
-import { URLParser } from './url-parser';
 import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
 import { AppArgs } from './models/args';
-import { Result, ScreenshotResult } from './models/screenshot-result';
-import { Browser } from './browser';
-import { exitWithError, getArgs, xhrGet } from './util';
-import { FrameworkParser } from './framework-parser';
+import { Result } from './models/screenshot-result';
 import { Framework, ParserConfig } from './models/parser';
+import { Browser } from './browser';
+import { URLParser } from './url-parser';
+import { FrameworkParser } from './framework-parser';
 import { HttpClient } from './http-client';
+import { exitWithError, getArgs, xhrGet } from './util';
+import { UserToken } from './models/user-token';
 
 console.clear();
 console.time('run');
@@ -60,7 +60,7 @@ class App {
    * Sniff project framework, file extension, etc.
    */
   private async getParserConfig(): Promise<ParserConfig> {
-    const frameworkParser = new FrameworkParser(this.args.dir);
+    const frameworkParser = new FrameworkParser(this.args.dir!);
     const [framework, extension] = await Promise.all([
       frameworkParser.getFramework(),
       frameworkParser.getExtension(),
@@ -78,6 +78,10 @@ class App {
    * Gather all routes and navigate to URLs to take screenshots.
    */
   public async run() {
+    const token = await UserToken.readFromFile();
+    console.log('got token', token);
+    process.exit(0);
+
     // Get parser config from user's project
     let parserConfig: ParserConfig;
     try {
@@ -87,23 +91,23 @@ class App {
     }
 
     // Get emtrey config from user's project
-    const projectConfig = await this.readProjectConfig(this.args.dir);
+    const projectConfig = await this.readProjectConfig(this.args.dir!);
     this.setProjectConfig(projectConfig);
 
     // Sniff out all project routes based on config
-    const routes = await new URLParser(parserConfig).getRoutes(this.args.dir);
+    const routes = await new URLParser(parserConfig).getRoutes(this.args.dir!);
 
     // Check localhost. @todo: Support skipping this.
-    await this.confirmProjectIsRunning(this.args.url, routes[0]);
+    await this.confirmProjectIsRunning(this.args.url!, routes[0]);
 
     // Prepare fs if project has config
-    const path = await this.prepareScreenshotDirectory(this.args.dir);
+    const path = await this.prepareScreenshotDirectory(this.args.dir!);
 
     // Browse to routes and execute plugins
     const browser = new Browser();
     const results = await browser.visitRoutes(
       routes,
-      this.args.url,
+      this.args.url!,
       path,
       projectConfig,
     );
@@ -185,8 +189,8 @@ class App {
   /**
    * Creates new http client with token from API.
    */
-  private async initializeHttpClient(): Promise<HttpClient> {
-    let client: HttpClient;
+  private async initializeHttpClient(): Promise<HttpClient | null> {
+    let client: HttpClient | null = null;
     try {
       client = new HttpClient(this.projectConfig.apiURL);
       await client.generateSessionToken();
@@ -226,9 +230,11 @@ class App {
    *
    * Steps for submitting results to API.
    *
-   * 1. Check if user has an Emtrey account
+   * 1. Check if user has an Emtrey account by looking for token in fs, or email address passed into process arg.
+   * If no email address or token is found, assume they are not registered.
    * -- YES: Auth this user to get token
-   * -- NO: Register new user to get token
+   * -- NO: Register new user to get token (prompt for organization?)
+   * -- ALWAYS: Cache the token on fs
    *
    * 2. With a user and token, does a project exist?
    * -- YES: Use project by unique name
@@ -253,11 +259,21 @@ class App {
     // const httpClient = await this.initializeHttpClient();
 
     console.log('app : submit results :', data);
-    const branchName = await this.getGitBranchName();
+    // const branchName = await this.getGitBranchName();
+
+    const cachedToken = await UserToken.readFromFile();
+
+    if (!cachedToken) {
+      // Create account
+    } else {
+      // Get project...?
+    }
 
     // return this.postResults(form, projectConfig);
     return null;
   }
+
+  private submitNewRunThrough() {}
 }
 
 new App(getArgs()).run();

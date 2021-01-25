@@ -104,10 +104,10 @@ export class URLParser {
    * Parse angular route files into route blocks.
    */
   private parseAngularRoutes(blocks: string[], routes: Route[] = []): Route[] {
-    let currentPath: string;
+    let currentPath = '';
 
     for (const block of blocks) {
-      const pathBlocks: string[] = block.match(/path:\s.+/gi);
+      const pathBlocks: string[] = block.match(/path:\s.+/gi)!;
       const paths = pathBlocks.map(b => b.replace(/\'|\"|path:\s|,/g, ''));
       const [path] = paths;
       // Must have value, cannot be wildcard
@@ -173,16 +173,16 @@ export class URLParser {
     const fileContent = await fs.promises.readFile(path, 'utf-8');
 
     // Get all children of the parent `<Router />` JSX element
-    const routerElement = fileContent.split('<Router').pop();
+    const routerElement = fileContent.split('<Router').pop()!;
 
     // All paths attached to `<Route />` JSX elements
     // Example: ["path="/"", "path="/projects"", "path="/project/:projectId"", ...]
-    const pathAttributes = routerElement.match(/path=.+(\"|\')/g);
+    const pathAttributes = routerElement!.match(/path=.+(\"|\')/g)!;
 
     // Narrow attributes down to final array
     // Example: ["/", "/projects", "/project/:projectId", "/about", "*"]
     const paths = pathAttributes
-      .map(p => p.split('=').pop().replace(/\"/g, ''))
+      .map(p => p.split('=').pop()!.replace(/\"/g, ''))
       .filter(p => !!p);
 
     return this.parseReactRoutes(paths);

@@ -1,5 +1,4 @@
-import { get } from 'https';
-import { User } from './models/user';
+import { get, RequestOptions } from 'https';
 import { exitWithError, Maybe } from './util';
 
 export class HttpClient {
@@ -9,11 +8,11 @@ export class HttpClient {
       hostname,
       path,
       headers,
-    };
+    } as RequestOptions;
     return new Promise((resolve, reject) => {
       get(options, res => {
         if (res.statusCode !== 200) {
-          reject(res.statusCode.toString());
+          reject(res.statusCode!.toString());
         }
 
         let raw = '';
@@ -27,11 +26,11 @@ export class HttpClient {
           try {
             data = JSON.parse(raw);
           } catch (err) {
-            console.log('http : error parsing data :', data);
+            // console.log('http : error parsing data :', data);
             reject(err);
           }
           // console.log('http : got data :', data);
-          resolve(data);
+          resolve(data!);
         });
 
         res.on('error', err => reject(err.message));
@@ -61,8 +60,8 @@ export class HttpClient {
     }
   }
 
-  public async getUser(): Promise<Maybe<User>> {
-    const url = 'api/user';
-    return this.getWithAuth<Maybe<User>>(url);
-  }
+  // public async getUser(): Promise<Maybe<User>> {
+  //   const url = 'api/user';
+  //   return this.getWithAuth<Maybe<User>>(url);
+  // }
 }
