@@ -12,18 +12,17 @@ import { Browser } from './browser';
 import { URLParser } from './url-parser';
 import { FrameworkParser } from './framework-parser';
 import { HttpClient } from './http-client';
-import { exitWithError, getArgs, xhrGet } from './util';
+import { exitWithError, getArgs, openBrowserTo, xhrGet } from './util';
 import { UserToken } from './models/user-token';
+import { User } from './models/user';
 
-console.clear();
 console.time('run');
 
 class App {
   private projectConfig: ProjectConfig;
+  private httpClient = new HttpClient(ProjectConfig.apiURL);
 
-  constructor(private args: Partial<AppArgs>) {
-    // console.log('app : args :', args);
-  }
+  constructor(private args: Partial<AppArgs>) {}
 
   /**
    * Look for an emtrey project config file in the source directory.
@@ -78,12 +77,19 @@ class App {
    * Gather all routes and navigate to URLs to take screenshots.
    */
   public async run() {
-    const token = await UserToken.readFromFile();
-    console.log('app : read user token :', token);
-    process.exit(0);
+    // Always need to start with a token
+    const token = await this.httpClient.generateSessionToken();
+    // Then let user login manually via web app
+    const user = await this.authorizeUser(token);
+    // Check if user has registered, if not we need to create an account before they continue
+    // const token = await UserToken.readFromFile();
+    // console.log('app : read user token :', token);
+
+    console.log(`auth : user "${user.first_name}" has authorized`);
 
     // Get parser config from user's project
     let parserConfig: ParserConfig;
+
     try {
       parserConfig = await this.getParserConfig();
     } catch (err) {
@@ -95,7 +101,7 @@ class App {
     this.setProjectConfig(projectConfig);
 
     // Sniff out all project routes based on config
-    const routes = await new URLParser(parserConfig).getRoutes(this.args.dir!);
+    const routes = await new URLParser(parserConfig!).getRoutes(this.args.dir!);
 
     // Check localhost. @todo: Support skipping this.
     await this.confirmProjectIsRunning(this.args.url!, routes[0]);
@@ -117,7 +123,7 @@ class App {
     // console.log(results);
     // console.log('--');
 
-    this.submitResults({ results, framework: parserConfig.framework });
+    this.submitResults({ results, framework: parserConfig!.framework });
 
     // Post data to server.
     // try {
@@ -187,20 +193,6 @@ class App {
   }
 
   /**
-   * Creates new http client with token from API.
-   */
-  private async initializeHttpClient(): Promise<HttpClient | null> {
-    let client: HttpClient | null = null;
-    try {
-      client = new HttpClient(this.projectConfig.apiURL);
-      await client.generateSessionToken();
-    } catch (err) {
-      exitWithError(err);
-    }
-    return client;
-  }
-
-  /**
    * Execute git command in project directory to get current git branch.
    */
   private getGitBranchName(): Promise<string> {
@@ -223,6 +215,48 @@ class App {
           resolve(branch);
         },
       );
+    });
+  }
+
+  /**
+   * Get a raw token, then launch user's web browser to finalize registration.
+   */
+  private async registerNewUser(): Promise<any> {
+    // const client = await this.initializeHttpClient();
+    // this.httpClient = client;
+    // // Doesn't support registering a new user :(
+    // const url = `https://${ProjectConfig.apiURL}/api-login?api_session_token=${client.token}`;
+    // openBrowserTo(url);
+    // return false;
+  }
+
+  /**
+   * Launch user's web browser to finalize user auth.
+   */
+  private async authorizeUser(token: string): Promise<User> {
+    const url = `https://${ProjectConfig.apiURL}/api-login?api_session_token=${token}`;
+    openBrowserTo(url);
+    return new Promise(resolve => {
+      let authTries = 1;
+      let user: User;
+      const getUserInterval = setInterval(async () => {
+        console.log(`auth : checking (${authTries}) ...`);
+        try {
+          user = await this.httpClient.getUser();
+          if (user) {
+            resolve(user);
+            clearInterval(getUserInterval);
+          }
+        } catch (err) {
+          console.log('auth : ', err);
+          // reject(err);
+          // clearInterval(getUserInterval);
+        }
+        if (authTries > 20) {
+          exitWithError('Too many authorization attempts');
+        }
+        authTries += 1;
+      }, 6000);
     });
   }
 
@@ -255,25 +289,24 @@ class App {
     results: Result;
     framework: Framework;
   }): Promise<any> {
-    // Ensure API is up.
-    // const httpClient = await this.initializeHttpClient();
-
     console.log('app : submit results :', data);
-    // const branchName = await this.getGitBranchName();
 
-    const cachedToken = await UserToken.readFromFile();
-
-    if (!cachedToken) {
-      // Create account
-    } else {
-      // Get project...?
-    }
-
-    // return this.postResults(form, projectConfig);
     return null;
   }
 
-  private submitNewRunThrough() {}
+  /**
+   * Creates new http client with project config.
+   */
+  private async initializeHttpClient() {
+    let client: HttpClient;
+    try {
+      client = new HttpClient(ProjectConfig.apiURL);
+      await client.generateSessionToken();
+    } catch (err) {
+      exitWithError(err);
+    }
+    return client!;
+  }
 }
 
 new App(getArgs()).run();

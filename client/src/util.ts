@@ -3,8 +3,6 @@ import puppeteer from 'puppeteer';
 
 import { AppArgs } from './models/args';
 
-export type Maybe<T> = T | null | undefined;
-
 /**
  * Strip non-unique values in array.
  */
@@ -163,4 +161,17 @@ export const getAllColorsInStyleSheets = async (
   );
 
   return colors;
+};
+
+/**
+ * Open OS-default web browser and go to url.
+ */
+export const openBrowserTo = (url: string) => {
+  const start =
+    process.platform == 'darwin'
+      ? 'open'
+      : process.platform == 'win32'
+      ? 'start'
+      : 'xdg-open';
+  require('child_process').exec(start + ' ' + url);
 };

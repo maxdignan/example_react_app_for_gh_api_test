@@ -22,15 +22,15 @@ export class ProjectConfig {
   static defaultDir = '.emtrey_tmp';
   static defaultLoginUrl = 'login';
 
+  /** Location of API. */
+  static apiURL = 'early-testing-emtrey.herokuapp.com';
+  static apiPort = 9000;
+
   /** Local directory where screens will be stored. */
   outputDirectory: string;
 
   /** Maximum amount of screens to take. */
   limit: number;
-
-  /** Location of API. */
-  apiURL = 'early-testing-emtrey.herokuapp.com';
-  apiPort = 9000;
 
   /**
    * Construct a new project config from file contents.
