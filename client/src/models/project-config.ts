@@ -44,16 +44,16 @@ export class ProjectConfig {
   }
 
   constructor(public config?: Partial<ProjectConfigInterface>) {
-    this.outputDirectory = config.outputDirectory || ProjectConfig.defaultDir;
-    this.limit = config.limit || ProjectConfig.defaultLimit;
+    this.outputDirectory = config?.outputDirectory || ProjectConfig.defaultDir;
+    this.limit = config?.limit || ProjectConfig.defaultLimit;
   }
 
   get routes() {
-    return this.config.routes;
+    return this.config?.routes;
   }
 
   get login() {
-    return this.config.login;
+    return this.config?.login;
   }
 
   /**
@@ -67,15 +67,15 @@ export class ProjectConfig {
    * Does this URL have a config entry in `routes`?
    */
   public hasURL(url: string): boolean {
-    return this.routes && url in this.routes;
+    return this.routes! && url in this.routes!;
   }
 
   /**
    * Get the wildcard config which servers as a base for all routes.
    */
   public getRouteWildcardConfig() {
-    const routes = this.config.routes;
-    return routes ? this.config.routes['*'] : {};
+    const routes = this.config?.routes;
+    return routes ? routes['*'] : {};
   }
 
   /**
@@ -92,11 +92,11 @@ export class ProjectConfig {
     const wildcard = this.getRouteWildcardConfig();
     return (
       (wildcard && this.willConfigAuth(wildcard)) ||
-      this.willConfigAuth(this.routes[url])
+      this.willConfigAuth(this.routes![url])
     );
   }
 
   public getURLProp(url: string, prop: 'delay' | 'enabled') {
-    return this.config.routes[url][prop];
+    return this.config?.routes![url][prop];
   }
 }

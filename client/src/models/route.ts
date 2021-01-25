@@ -14,7 +14,7 @@ export class Route implements RouteInterface {
    */
   static getFileNameFromURL(url: string): string {
     const parts = url.split('/');
-    return parts.pop();
+    return parts.pop()!;
   }
 
   static fromURL(url: string): Route {
@@ -46,7 +46,7 @@ export class Route implements RouteInterface {
         const token = tokenWithIdentifier.replace(':', '');
         const url = `${base}/${this.url.replace(
           tokenWithIdentifier,
-          config.routes[this.url as string][token],
+          config.routes![this.url as string][token],
         )}`;
         return url;
       }

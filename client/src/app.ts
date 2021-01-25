@@ -79,7 +79,7 @@ class App {
    */
   public async run() {
     const token = await UserToken.readFromFile();
-    console.log('got token', token);
+    console.log('app : read user token :', token);
     process.exit(0);
 
     // Get parser config from user's project

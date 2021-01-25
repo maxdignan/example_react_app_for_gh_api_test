@@ -13,7 +13,7 @@ export class UserToken implements UserTokenInterface {
   readonly organizationId?: number;
 
   // Relative location of cached user token on fs.
-  static tokenName = 'stmp/.emtrey';
+  static tokenName = 'tmp/.emtrey';
 
   private static fromJSON(json: string): UserToken {
     let token: UserTokenInterface = {} as UserTokenInterface;
