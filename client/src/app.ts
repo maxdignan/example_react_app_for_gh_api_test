@@ -118,10 +118,8 @@ class App {
       projectConfig,
     );
 
-    // console.log('--');
     // console.log('app : run : final results :');
     // console.log(results);
-    // console.log('--');
 
     this.submitResults({ results, framework: parserConfig!.framework });
 
@@ -249,10 +247,9 @@ class App {
           }
         } catch (err) {
           console.log('auth : ', err);
-          // reject(err);
-          // clearInterval(getUserInterval);
+          // reject(err); clearInterval(getUserInterval);
         }
-        if (authTries > 20) {
+        if (authTries > 19) {
           exitWithError('Too many authorization attempts');
         }
         authTries += 1;
@@ -291,21 +288,8 @@ class App {
   }): Promise<any> {
     console.log('app : submit results :', data);
 
+    const branch = await this.getGitBranchName();
     return null;
-  }
-
-  /**
-   * Creates new http client with project config.
-   */
-  private async initializeHttpClient() {
-    let client: HttpClient;
-    try {
-      client = new HttpClient(ProjectConfig.apiURL);
-      await client.generateSessionToken();
-    } catch (err) {
-      exitWithError(err);
-    }
-    return client!;
   }
 }
 

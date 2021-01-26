@@ -1,13 +1,15 @@
 import { get, RequestOptions } from 'https';
+import { User } from './models/user';
 import { exitWithError } from './util';
 
 export class HttpClient {
   static get<T>(hostname: string, path: string, token?: string): Promise<T> {
     if (!path.startsWith('/')) {
-      throw new Error('Path must start with a forward slash');
+      path = `/${path}`;
     }
 
     const headers = token ? { api_session_token: token } : null;
+
     const options = {
       hostname,
       path,
@@ -47,7 +49,7 @@ export class HttpClient {
 
   token: string;
 
-  constructor(private apiURL: string, private apiPort = 0) {}
+  constructor(private apiURL: string, private apiPort = 9e3) {}
 
   public getWithAuth<T>(url: string): Promise<T> {
     return HttpClient.get(this.apiURL, url, this.token);
@@ -68,8 +70,8 @@ export class HttpClient {
     return this.token;
   }
 
-  public async getUser(): Promise<any> {
+  public async getUser<T = User>(): Promise<T> {
     const url = '/api/user';
-    return this.getWithAuth<any>(url);
+    return this.getWithAuth<T>(url);
   }
 }
