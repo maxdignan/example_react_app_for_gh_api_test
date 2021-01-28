@@ -23,8 +23,8 @@ export class ProjectConfig {
   static defaultLoginUrl = 'login';
 
   /** Location of API. */
-  static apiURL = 'early-testing-emtrey.herokuapp.com';
-  static apiPort = 9000;
+  // static apiURL = 'app-qa.emtrey.io';
+  static apiURL = 'app-dev.emtrey.io';
 
   /** Local directory where screens will be stored. */
   outputDirectory: string;

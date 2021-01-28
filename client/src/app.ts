@@ -79,6 +79,7 @@ class App {
   public async run() {
     // Always need to start with a token
     const token = await this.httpClient.generateSessionToken();
+    console.log('auth : got token :', token);
     // Then let user login manually via web app
     const user = await this.authorizeUser(token);
     // Check if user has registered, if not we need to create an account before they continue
@@ -86,6 +87,8 @@ class App {
     // console.log('app : read user token :', token);
 
     console.log(`auth : user "${user.first_name}" has authorized`);
+
+    process.exit(0);
 
     // Get parser config from user's project
     let parserConfig: ParserConfig;
@@ -289,6 +292,7 @@ class App {
     console.log('app : submit results :', data);
 
     const branch = await this.getGitBranchName();
+
     return null;
   }
 }

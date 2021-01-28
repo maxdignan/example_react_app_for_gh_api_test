@@ -1,42 +1,58 @@
-import { get, RequestOptions } from 'https';
+import { request, RequestOptions } from 'https';
 import { User } from './models/user';
 import { exitWithError } from './util';
 
 export class HttpClient {
-  static get<T>(hostname: string, path: string, token?: string): Promise<T> {
+  static request<T>(
+    method: 'GET' | 'POST' = 'GET',
+    hostname: string,
+    path: string,
+    token?: string,
+    params?: { [key: string]: any },
+  ): Promise<T> {
     if (!path.startsWith('/')) {
       path = `/${path}`;
     }
 
     const headers = token ? { api_session_token: token } : null;
 
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    // },
+
     const options = {
       hostname,
       path,
       headers,
+      method,
     } as RequestOptions;
 
-    // console.log('http client : get :', hostname, path, token);
+    console.log('http client : request :', options);
 
     return new Promise((resolve, reject) => {
-      get(options, res => {
+      const req = request(options, res => {
         // 500's should reject, everything else passes
         if (res.statusCode?.toString().startsWith('5')) {
           reject(res.statusCode!.toString());
         }
 
-        let raw = '';
-        res.on('data', d => {
-          // console.log('http : got data :', d);
-          raw += d;
+        const chunks: Buffer[] = [];
+
+        res.on('data', data => {
+          chunks.push(data);
         });
 
         res.on('end', () => {
           let data: T;
           try {
-            data = JSON.parse(raw);
+            const body = Buffer.concat(chunks);
+            const isJSON = res.headers['content-type']?.includes('/json');
+            if (isJSON) {
+              data = JSON.parse(body.toString());
+            }
+            // data = JSON.parse(raw);
           } catch (err) {
-            // console.log('http : error parsing data as json :', data!);
+            console.log('http : error parsing data as json :', data!);
             resolve(data!);
           }
           resolve(data!);
@@ -44,15 +60,25 @@ export class HttpClient {
 
         res.on('error', err => reject(err.message));
       });
+
+      if (method === 'POST' && params) {
+        req.write(JSON.stringify(params));
+      }
+
+      req.end();
     });
   }
 
-  token: string;
+  public token: string;
 
-  constructor(private apiURL: string, private apiPort = 9e3) {}
+  constructor(private apiURL: string) {}
 
-  public getWithAuth<T>(url: string): Promise<T> {
-    return HttpClient.get(this.apiURL, url, this.token);
+  public get<T>(url: string): Promise<T> {
+    return HttpClient.request('GET', this.apiURL, url, this.token);
+  }
+
+  public post<T>(url: string, params: { [key: string]: any }): Promise<T> {
+    return HttpClient.request('POST', this.apiURL, url, this.token, params);
   }
 
   /**
@@ -61,9 +87,13 @@ export class HttpClient {
   public async generateSessionToken(): Promise<string> {
     const path = '/api/user/generate-raw-api-session';
     try {
-      const res = await HttpClient.get<{ token: string }>(this.apiURL, path);
+      const res = await HttpClient.request<{ token: string }>(
+        'GET',
+        this.apiURL,
+        path,
+      );
+      console.log('http client : generated token :', res);
       this.token = res.token;
-      // console.log('http client : generated token :', res.token);
     } catch (err) {
       exitWithError(err);
     }
@@ -72,6 +102,15 @@ export class HttpClient {
 
   public async getUser<T = User>(): Promise<T> {
     const url = '/api/user';
-    return this.getWithAuth<T>(url);
+    return this.get<T>(url);
+  }
+
+  /**
+   * Post run through results.
+   */
+  public async postResults() {
+    const url = 'api/run-through';
+    return this.post(url, {});
+    // curl -H "api_session_token: fYBIu4nP85qE-0xW0BhyooG5EdbPrUZ6QcwnkM3JCH3Ea30sO9unMNOOThsWl" -d "branch=feature/cool&commit=983u92f9ejwio3j9efw&project_id=2" -X POST https://early-testing-emtrey.herokuapp.com/api/run-through
   }
 }
