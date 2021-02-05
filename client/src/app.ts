@@ -78,7 +78,9 @@ class App {
    */
   public async run() {
     // Always need to start with a token
-    const token = await this.httpClient.generateSessionToken();
+    // const token = await this.httpClient.generateSessionToken();
+    const token =
+      'haDZ3hKdX46sbaeTXVkHzLZ-gfeEp6IoNOqHmdGaXfDa7d0K4jEprWo61-58';
     console.log('auth : got token :', token);
     // Then let user login manually via web app
     const user = await this.authorizeUser(token);
@@ -86,7 +88,7 @@ class App {
     // const token = await UserToken.readFromFile();
     // console.log('app : read user token :', token);
 
-    console.log(`auth : user "${user.first_name}" has authorized`);
+    console.log(`auth : user "${user}" has authorized`);
 
     process.exit(0);
 
@@ -220,18 +222,6 @@ class App {
   }
 
   /**
-   * Get a raw token, then launch user's web browser to finalize registration.
-   */
-  private async registerNewUser(): Promise<any> {
-    // const client = await this.initializeHttpClient();
-    // this.httpClient = client;
-    // // Doesn't support registering a new user :(
-    // const url = `https://${ProjectConfig.apiURL}/api-login?api_session_token=${client.token}`;
-    // openBrowserTo(url);
-    // return false;
-  }
-
-  /**
    * Launch user's web browser to finalize user auth.
    */
   private async authorizeUser(token: string): Promise<User> {
@@ -239,7 +229,7 @@ class App {
     openBrowserTo(url);
     return new Promise(resolve => {
       let authTries = 1;
-      let user: User;
+      let user: User | null;
       const getUserInterval = setInterval(async () => {
         console.log(`auth : checking (${authTries}) ...`);
         try {

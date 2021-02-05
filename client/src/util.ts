@@ -4,12 +4,6 @@ import puppeteer from 'puppeteer';
 import { AppArgs } from './models/args';
 
 /**
- * Strip non-unique values in array.
- */
-const uniqueArray = (value: unknown, index: number, self: unknown[]) =>
-  self.indexOf(value) === index;
-
-/**
  * Turn process arguments into object. Example:
  * node config/build.js -lHRs --ip=$HOST --port=$PORT --env=dev
 output
