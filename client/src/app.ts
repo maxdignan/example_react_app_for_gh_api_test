@@ -160,12 +160,14 @@ class App {
     // } catch (err) {
     //   console.log('app : error');
     // }
+
     // Cleanup
-    // try {
-    //   await this.cleanup(path);
-    // } catch (err) {
-    //   console.error('app : cleanup error');
-    // }
+    try {
+      await this.cleanup(path);
+    } catch (err) {
+      console.error('app : cleanup error');
+    }
+
     console.timeEnd('run');
   }
 
@@ -205,15 +207,17 @@ class App {
    * Empty temp dir.
    */
   private async cleanup(dir: string) {
-    return new Promise((resolve, reject) => {
-      console.log('app : cleaning up dir :', dir);
-      rmdir(dir, { recursive: true }, err => {
-        if (err) {
-          return reject(err);
-        }
-        resolve(null);
-      });
-    });
+    // Disabled for dev
+    return Promise.resolve(null);
+    // return new Promise((resolve, reject) => {
+    //   console.log('app : cleaning up dir :', dir);
+    //   rmdir(dir, { recursive: true }, err => {
+    //     if (err) {
+    //       return reject(err);
+    //     }
+    //     resolve(null);
+    //   });
+    // });
   }
 
   /**

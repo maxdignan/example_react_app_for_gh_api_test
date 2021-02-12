@@ -279,7 +279,9 @@ export class Browser {
       metaData.push(await this.collectMetaData(params));
 
       // Only reuse the first page - seems to work best with example NG app
-      await page!.close();
+      if (page!) {
+        await page!.close();
+      }
       await reusedPage.close();
 
       page = null;
