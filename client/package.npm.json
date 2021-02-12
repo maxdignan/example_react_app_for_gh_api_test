@@ -1,0 +1,11 @@
+{
+  "name": "emtrey",
+  "version": "0.0.3",
+  "description": "",
+  "main": "app.js",
+  "author": "emtrey.io",
+  "license": "ISC",
+  "bin": {
+    "emtrey": "./app.js"
+  }
+}

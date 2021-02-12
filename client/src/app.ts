@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { existsSync, mkdirSync, rmdir } from 'fs';
 import { exec } from 'child_process';
 import { join } from 'path';
@@ -77,18 +79,28 @@ class App {
    * Gather all routes and navigate to URLs to take screenshots.
    */
   public async run() {
-    // Always need to start with a token
-    // const token = await this.httpClient.generateSessionToken();
-    const token =
-      'haDZ3hKdX46sbaeTXVkHzLZ-gfeEp6IoNOqHmdGaXfDa7d0K4jEprWo61-58';
-    console.log('auth : got token :', token);
-    // Then let user login manually via web app
-    const user = await this.authorizeUser(token);
-    // Check if user has registered, if not we need to create an account before they continue
-    // const token = await UserToken.readFromFile();
-    // console.log('app : read user token :', token);
+    let sessionToken: string;
+    let userToken = await UserToken.readUserFromFS();
 
-    console.log(`auth : user "${user}" has authorized`);
+    if (!userToken) {
+      console.log('auth : no user token, creating one...');
+      // User token is not cached on fs, create one...
+      sessionToken = await this.httpClient.generateSessionToken();
+      // const token = 'haDZ3hKdX46sbaeTXVkHzLZ-gfeEp6IoNOqHmdGaXfDa7d0K4jEprWo61-58';
+      console.log('auth : got session token :', sessionToken);
+
+      // Then let user login manually via web app
+      const user = await this.authorizeUser(sessionToken);
+      console.log('auth : authorized user :', user);
+
+      // Save user token for future runs
+      await UserToken.saveToFS(user, sessionToken);
+      console.log('auth : user token saved');
+    } else {
+      // Use token from user file
+      console.log('auth : got cached user :', userToken);
+      sessionToken = userToken.token;
+    }
 
     process.exit(0);
 
@@ -123,8 +135,8 @@ class App {
       projectConfig,
     );
 
-    // console.log('app : run : final results :');
-    // console.log(results);
+    console.log('app : run : final results :');
+    console.log(results);
 
     this.submitResults({ results, framework: parserConfig!.framework });
 
@@ -224,8 +236,8 @@ class App {
   /**
    * Launch user's web browser to finalize user auth.
    */
-  private async authorizeUser(token: string): Promise<User> {
-    const url = `https://${ProjectConfig.apiURL}/api-login?api_session_token=${token}`;
+  private async authorizeUser(sessionToken: string): Promise<User> {
+    const url = `https://${ProjectConfig.apiURL}/api-login?api_session_token=${sessionToken}`;
     openBrowserTo(url);
     return new Promise(resolve => {
       let authTries = 1;

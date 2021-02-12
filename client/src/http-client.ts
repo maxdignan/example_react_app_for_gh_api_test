@@ -99,7 +99,7 @@ export class HttpClient {
   /**
    * @example:
    * curl -H "api_session_token haDZ3hKdX46sbaeTXVkHzLZ-gfeEp6IoNOqHmdGaXfDa7d0K4jEprWo61-58" \
-      https://app-dev.emtrey.io/api/user≈
+      https://app-dev.emtrey.io/api/user
    */
   public async getUser(): Promise<User | null> {
     return this.get<User | null>('/api/user');
@@ -107,9 +107,7 @@ export class HttpClient {
 
   /**
    * @example:
-   * curl -H "api_session_token: haDZ3hKdX46sbaeTXVkHzLZ-gfeEp6IoNOqHmdGaXfDa7d0K4jEprWo61-58" \
-      -d "name=project2&github_url=foo&org_id=1" \
-      -X POST https://app-dev.emtrey.io/api/project
+   * curl -H "api_session_token: cGIiCtRA-fSufvEPjCn8e1dse6xwXKza0ELY2fY59Wds1PbLQKIL8QAxun2J" -d "name=my_first_project&github_url=foo&org_id=1" -X POST https://app-dev.emtrey.io/api/project >> error.htm
    */
   public async createProject(): Promise<Project> {
     const params = {
@@ -122,17 +120,20 @@ export class HttpClient {
 
   /**
    * @example:
-   * curl -H "api_session_token: fYBIu4nP85qE-0xW0BhyooG5EdbPrUZ6QcwnkM3JCH3Ea30sO9unMNOOThsWl" \
-      -d "branch=feature/cool&commit=983u92f9ejwio3j9efw&project_id=2" \
+   * curl -H "api_session_token: cGIiCtRA-fSufvEPjCn8e1dse6xwXKza0ELY2fY59Wds1PbLQKIL8QAxun2J" \
+      -d "branch=feature/cool&commit=1b40487461a3624c669195979fdd2d8c642cca6c&project_id=2" \
       -X POST https://app-dev.emtrey.io/api/run-through
    */
-  public async postRunThrough(): Promise<unknown> {
+  public async postRunThrough(data: {
+    branch: string;
+    commit: string;
+  }): Promise<{} | null> {
     const params = {
-      branch: 'branch',
-      commit: 'baz',
-      project_id: null,
+      branch: data.branch,
+      commit: data.commit,
+      project_id: 2,
     };
-    return this.post<unknown>('api/run-through', params);
+    return this.post<{} | null>('api/run-through', params);
   }
 
   /**
@@ -179,5 +180,13 @@ export class HttpClient {
       req.write(fileBuffer);
       req.end();
     });
+  }
+
+  /**
+   * After all other API endpoints has been completed.
+   */
+  public async startDiff(): Promise<void> {
+    const params = {};
+    // return this.post<{}>('api/page-capture/done-uploading', params);
   }
 }
