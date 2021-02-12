@@ -76,17 +76,16 @@ class App {
   }
 
   /**
-   * Gather all routes and navigate to URLs to take screenshots.
+   * Get user from cache or create new.
    */
-  public async run() {
+  private async initializeUserToken() {
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS();
 
     if (!userToken) {
       console.log('auth : no user token, creating one...');
       // User token is not cached on fs, create one...
-      sessionToken = await this.httpClient.generateSessionToken();
-      // const token = 'haDZ3hKdX46sbaeTXVkHzLZ-gfeEp6IoNOqHmdGaXfDa7d0K4jEprWo61-58';
+      sessionToken = await this.httpClient.generateAndSetSessionToken();
       console.log('auth : got session token :', sessionToken);
 
       // Then let user login manually via web app
@@ -99,10 +98,20 @@ class App {
     } else {
       // Use token from user file
       console.log('auth : got cached user :', userToken);
-      sessionToken = userToken.token;
+      const { token } = userToken;
+      if (!token) {
+        exitWithError('Invalid user token!');
+      }
+      sessionToken = token;
     }
+    return userToken;
+  }
 
-    process.exit(0);
+  /**
+   * Gather all routes and navigate to URLs to take screenshots.
+   */
+  public async run() {
+    await this.initializeUserToken();
 
     // Get parser config from user's project
     let parserConfig: ParserConfig;

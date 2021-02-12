@@ -80,7 +80,7 @@ export class HttpClient {
    * @example:
    * curl https://app-dev.emtrey.io/api/user/generate-raw-api-session
    */
-  public async generateSessionToken(): Promise<string> {
+  public async generateAndSetSessionToken(): Promise<string> {
     const path = '/api/user/generate-raw-api-session';
     try {
       const res = await HttpClient.request<{ token: string }>(
