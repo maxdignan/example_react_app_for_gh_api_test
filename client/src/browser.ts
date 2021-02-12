@@ -243,6 +243,7 @@ export class Browser {
         })) as ScreenshotResult;
         results.push(loginResult);
         hasVisitedLogin = true;
+        page.close();
       }
       // Below goes to auth before navigating to other routes, but only once.
       // console.log('browser : authorize first');
@@ -255,7 +256,7 @@ export class Browser {
     for (const route of routes) {
       /** @todo: We should be closing this page. */
       // const reusedPage = page || (await browser.newPage());
-      const reusedPage = await browser.newPage();
+      const page = await browser.newPage();
 
       if (route.url === config.getLoginUrl() && hasVisitedLogin) {
         // We already have login screen.
@@ -264,7 +265,7 @@ export class Browser {
       }
 
       if (willAuth) {
-        await this.authorize(reusedPage, serverUrl, config);
+        await this.authorize(page, serverUrl, config);
       }
 
       const params = {
@@ -272,19 +273,13 @@ export class Browser {
         serverUrl,
         config,
         path,
-        page: reusedPage,
+        page,
       };
 
       results.push(await this.visitRoute(params));
       metaData.push(await this.collectMetaData(params));
 
-      // Only reuse the first page - seems to work best with example NG app
-      if (page!) {
-        await page!.close();
-      }
-      await reusedPage.close();
-
-      page = null;
+      await page.close();
     }
 
     // Build style guide after all route visits.

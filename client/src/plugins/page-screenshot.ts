@@ -20,10 +20,11 @@ export class PageScreenShotPlugin extends Plugin<string> {
   async run(page: puppeteer.Page, options: PluginOptions) {
     const url = page.url();
     const extension = this.getExtension();
+    // Use route, or if empty assume home page
     const fileName = options.routeId
-      ? `${Route.getFileNameFromURL(url)}.${extension}`
+      ? `${Route.getFileNameFromURL(url)}`
       : 'index';
-    const path = join(options.path, fileName);
+    const path = join(options.path, `${fileName}.${extension}`);
 
     try {
       await page.screenshot({
