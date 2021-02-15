@@ -170,3 +170,19 @@ export const openBrowserTo = (url: string) => {
       : 'xdg-open';
   require('child_process').exec(start + ' ' + url);
 };
+
+/**
+ * Example.
+ */
+
+export const Example = () => {
+  const readline = require('readline').createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  readline.question('Enter your Emtry login email: ', (name: string) => {
+    console.log(`Hi ${name}!`);
+    readline.close();
+  });
+};

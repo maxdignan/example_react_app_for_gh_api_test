@@ -145,9 +145,15 @@ export class HttpClient {
       -d "page_route=/hellopage&page_title=HelloPage&run_through_id=34" \
       -X POST https://app-dev.emtrey.io/api/page-capture
    */
-  public async postPageCapture(): Promise<void> {
+  public async postPageCapture(params: {
+    fileName: string;
+    pageRoute: string;
+    pageTitle: string;
+    runThroughId: number;
+  }): Promise<void> {
     return new Promise((resolve, reject) => {
-      const fileBuffer = readFileSync(__dirname + '/emtrey_screenshots.jpg');
+      // const fileBuffer = readFileSync(__dirname + '/emtrey_screenshots.jpg');
+      const fileBuffer = readFileSync(__dirname + params.fileName);
 
       const path =
         '/page-capture-dev/AzzXJNGP0uiVKsxjdGhJkPCO?contentType=binary%2Foctet-stream&x-amz-acl=public-read&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA4LXJZS2YDDWBHCC7%2F20210107%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20210107T202708Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=7d6471ca92f25aa01da159564780529fc03f189981b8da1c3b8ee93696bbf94b';

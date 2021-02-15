@@ -18,6 +18,7 @@ import { exitWithError, getArgs, openBrowserTo, xhrGet } from './util';
 import { UserToken } from './models/user-token';
 import { User } from './models/user';
 import { GitInfo } from './models/git-info';
+import { RunThrough } from './models/run-through';
 
 console.time('run');
 
@@ -83,28 +84,28 @@ class App {
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS();
 
-    // if (!userToken) {
-    console.log('auth : no user token, creating one...');
-    // User token is not cached on fs, create one...
-    sessionToken = await this.httpClient.generateAndSetSessionToken();
-    console.log('auth : got session token :', sessionToken);
+    if (!userToken) {
+      console.log('auth : no user token, creating one...');
+      // User token is not cached on fs, create one...
+      sessionToken = await this.httpClient.generateAndSetSessionToken();
+      console.log('auth : got session token :', sessionToken);
 
-    // Then let user login manually via web app
-    const user = await this.authorizeUser(sessionToken);
-    console.log('auth : authorized user :', user);
+      // Then let user login manually via web app
+      const user = await this.authorizeUser(sessionToken);
+      console.log('auth : authorized user :', user);
 
-    // Save user token for future runs
-    await UserToken.saveToFS(user, sessionToken);
-    console.log('auth : user token saved');
-    // } else {
-    //   // Use token from user file
-    //   console.log('auth : got cached user :', userToken);
-    //   const { token } = userToken;
-    //   if (!token) {
-    //     exitWithError('Invalid user token!');
-    //   }
-    //   sessionToken = token;
-    // }
+      // Save user token for future runs
+      await UserToken.saveToFS(user, sessionToken);
+      console.log('auth : user token saved');
+    } else {
+      // Use token from user file
+      console.log('auth : got cached user :', userToken);
+      const { token } = userToken;
+      if (!token) {
+        exitWithError('Invalid user token!');
+      }
+      sessionToken = token;
+    }
     return userToken;
   }
 
@@ -283,7 +284,7 @@ class App {
     console.log('app : submit results :', data);
 
     // Start with posting run through result to project
-    let runThroughResult;
+    let runThroughResult: RunThrough;
 
     try {
       const [branch, commit] = await this.getGitInfo();
