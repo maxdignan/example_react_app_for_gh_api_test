@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { request, RequestOptions } from 'https';
 
 import { Project } from './models/project';
+import { RunThrough } from './models/run-through';
 import { User } from './models/user';
 import { exitWithError } from './util';
 
@@ -28,9 +29,10 @@ export class HttpClient {
 
     return new Promise((resolve, reject) => {
       const req = request(options, res => {
-        // 500's should reject, everything else passes
-        if (res.statusCode?.toString().startsWith('5')) {
-          reject(res.statusCode!.toString());
+        // 500's and 400's should reject, everything else passes
+        const statusCode = res.statusCode?.toString();
+        if (statusCode?.startsWith('5') || statusCode?.startsWith('4')) {
+          reject(res.statusMessage);
         }
 
         const chunks: Buffer[] = [];
@@ -107,7 +109,9 @@ export class HttpClient {
 
   /**
    * @example:
-   * curl -H "api_session_token: cGIiCtRA-fSufvEPjCn8e1dse6xwXKza0ELY2fY59Wds1PbLQKIL8QAxun2J" -d "name=my_first_project&github_url=foo&org_id=1" -X POST https://app-dev.emtrey.io/api/project >> error.htm
+   * curl -H "api_session_token: cGIiCtRA-fSufvEPjCn8e1dse6xwXKza0ELY2fY59Wds1PbLQKIL8QAxun2J" \
+   * -d "name=my_first_project&github_url=foo&org_id=1" \
+   * -X POST https://app-dev.emtrey.io/api/project
    */
   public async createProject(): Promise<Project> {
     const params = {
@@ -119,21 +123,20 @@ export class HttpClient {
   }
 
   /**
+   * @param:
+   * Commit must be unique or API will return 400 for the request.
    * @example:
-   * curl -H "api_session_token: cGIiCtRA-fSufvEPjCn8e1dse6xwXKza0ELY2fY59Wds1PbLQKIL8QAxun2J" \
-      -d "branch=feature/cool&commit=1b40487461a3624c669195979fdd2d8c642cca6c&project_id=2" \
-      -X POST https://app-dev.emtrey.io/api/run-through
+   * curl -H "api_session_token: 3FkUTJtI-MGuCStpqv6vHebRIUiWHho5-_Qf-hxqa3ACt7RqTiGt8wrg2iuG" \
+      -d "branch=feature/cool&commit=7ba25027c821425dfd87622d849d2669c6dcb813&project_id=36" \
+      -X POST https://app-dev.emtrey.io/api/run-through \
+      -vvv
    */
-  public async postRunThrough(data: {
+  public async postRunThrough(params: {
     branch: string;
     commit: string;
-  }): Promise<{} | null> {
-    const params = {
-      branch: data.branch,
-      commit: data.commit,
-      project_id: 2,
-    };
-    return this.post<{} | null>('api/run-through', params);
+    project_id: number;
+  }): Promise<RunThrough> {
+    return this.post<RunThrough>('api/run-through', params);
   }
 
   /**
@@ -146,19 +149,23 @@ export class HttpClient {
     return new Promise((resolve, reject) => {
       const fileBuffer = readFileSync(__dirname + '/emtrey_screenshots.jpg');
 
+      const path =
+        '/page-capture-dev/AzzXJNGP0uiVKsxjdGhJkPCO?contentType=binary%2Foctet-stream&x-amz-acl=public-read&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA4LXJZS2YDDWBHCC7%2F20210107%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20210107T202708Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=7d6471ca92f25aa01da159564780529fc03f189981b8da1c3b8ee93696bbf94b';
+
       const options = {
         hostname: 's3.amazonaws.com',
-        path:
-          '/page-capture-dev/AzzXJNGP0uiVKsxjdGhJkPCO?contentType=binary%2Foctet-stream&x-amz-acl=public-read&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA4LXJZS2YDDWBHCC7%2F20210107%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20210107T202708Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=7d6471ca92f25aa01da159564780529fc03f189981b8da1c3b8ee93696bbf94b',
         method: 'PUT',
+        path,
       };
 
       const req = request(options, res => {
-        // console.log(`STATUS: ${res.statusCode}`);
-        // console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-        // res.on('data', chunk => {
-        //   console.log(`BODY: ${chunk}`);
-        // });
+        console.log(`STATUS: ${res.statusCode}`);
+        console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
+
+        res.on('data', chunk => {
+          console.log(`BODY: ${chunk}`);
+        });
+
         res.on('end', () => {
           console.log('No more data in response.');
           resolve();

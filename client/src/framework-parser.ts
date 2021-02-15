@@ -37,10 +37,6 @@ export class FrameworkParser {
     return new Promise(resolve => {
       fs.access(`${this.dir}/node_modules/${packageName}`, err => {
         if (err) {
-          // console.log(
-          //   'framework parser : error finding project package :',
-          //   err,
-          // );
           return resolve(false);
         }
         resolve(true);

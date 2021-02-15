@@ -17,6 +17,7 @@ import { HttpClient } from './http-client';
 import { exitWithError, getArgs, openBrowserTo, xhrGet } from './util';
 import { UserToken } from './models/user-token';
 import { User } from './models/user';
+import { GitInfo } from './models/git-info';
 
 console.time('run');
 
@@ -82,28 +83,28 @@ class App {
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS();
 
-    if (!userToken) {
-      console.log('auth : no user token, creating one...');
-      // User token is not cached on fs, create one...
-      sessionToken = await this.httpClient.generateAndSetSessionToken();
-      console.log('auth : got session token :', sessionToken);
+    // if (!userToken) {
+    console.log('auth : no user token, creating one...');
+    // User token is not cached on fs, create one...
+    sessionToken = await this.httpClient.generateAndSetSessionToken();
+    console.log('auth : got session token :', sessionToken);
 
-      // Then let user login manually via web app
-      const user = await this.authorizeUser(sessionToken);
-      console.log('auth : authorized user :', user);
+    // Then let user login manually via web app
+    const user = await this.authorizeUser(sessionToken);
+    console.log('auth : authorized user :', user);
 
-      // Save user token for future runs
-      await UserToken.saveToFS(user, sessionToken);
-      console.log('auth : user token saved');
-    } else {
-      // Use token from user file
-      console.log('auth : got cached user :', userToken);
-      const { token } = userToken;
-      if (!token) {
-        exitWithError('Invalid user token!');
-      }
-      sessionToken = token;
-    }
+    // Save user token for future runs
+    await UserToken.saveToFS(user, sessionToken);
+    console.log('auth : user token saved');
+    // } else {
+    //   // Use token from user file
+    //   console.log('auth : got cached user :', userToken);
+    //   const { token } = userToken;
+    //   if (!token) {
+    //     exitWithError('Invalid user token!');
+    //   }
+    //   sessionToken = token;
+    // }
     return userToken;
   }
 
@@ -111,7 +112,12 @@ class App {
    * Gather all routes and navigate to URLs to take screenshots.
    */
   public async run() {
-    await this.initializeUserToken();
+    // Do all user stuff first
+    // await this.initializeUserToken();
+
+    await this.submitResults({} as any);
+
+    return setTimeout(() => process.exit(), 2000);
 
     // Get parser config from user's project
     let parserConfig: ParserConfig;
@@ -147,21 +153,14 @@ class App {
     console.log('app : run : final results :');
     console.log(results);
 
-    this.submitResults({ results, framework: parserConfig!.framework });
+    // Send data to API
+    try {
+      await this.submitResults({ results, framework: parserConfig!.framework });
+    } catch (err) {
+      console.log('app : error');
+    }
 
-    // Post data to server.
-    // try {
-    //   await this.submitResults(
-    //     results,
-    //     path,
-    //     projectConfig,
-    //     parserConfig.framework,
-    //   );
-    // } catch (err) {
-    //   console.log('app : error');
-    // }
-
-    // Cleanup
+    // Cleanup local fs
     try {
       await this.cleanup(path);
     } catch (err) {
@@ -221,26 +220,25 @@ class App {
   }
 
   /**
-   * Execute git command in project directory to get current git branch.
+   * Execute git command in project directory to get current branch and commit hash.
    */
-  private getGitBranchName(): Promise<string> {
-    return new Promise(resolve => {
-      console.time('git');
+  private getGitInfo(): Promise<GitInfo | string> {
+    return new Promise((resolve, reject) => {
+      console.time('git info');
       exec(
-        'git rev-parse --abbrev-ref HEAD',
+        'git rev-parse --abbrev-ref HEAD && git rev-parse HEAD',
         {
           cwd: this.args.dir,
         },
         (err: Error, stdout: string, stderr: string) => {
-          console.timeEnd('git');
+          console.timeEnd('git info');
           if (err || stderr) {
-            // throw new Error(err || stderr);
             // Git may not be initialized, or no commit exists.
-            exitWithError('app : error finding git branch');
+            reject(err.message || stderr);
           }
-          const branch = stdout.trim();
-          console.log('app : got git branch :', branch);
-          resolve(branch);
+          const info = stdout.trim().split('\n') as GitInfo;
+          // console.log('app : got git info :', info);
+          resolve(info);
         },
       );
     });
@@ -276,37 +274,28 @@ class App {
   }
 
   /**
-   *
-   * Steps for submitting results to API.
-   *
-   * 1. Check if user has an Emtrey account by looking for token in fs, or email address passed into process arg.
-   * If no email address or token is found, assume they are not registered.
-   * -- YES: Auth this user to get token
-   * -- NO: Register new user to get token (prompt for organization?)
-   * -- ALWAYS: Cache the token on fs
-   *
-   * 2. With a user and token, does a project exist?
-   * -- YES: Use project by unique name
-   * -- NO: Create a new project
-   *
-   * 3. With a project, post a run-through. Success?
-   * -- YES: Continue
-   * -- NO: Fatal error - try again?
-   *
-   * 4. With the response URL from the run-through, post the screen shots. Success?
-   * -- YES: That's pretty much it
-   * -- NO: Fatal error - try again?
-   *
-   * 5. Drink a beer
-   *
+   * Submits results to API in multiple steps.
    */
   private async submitResults(data: {
     results: Result;
     framework: Framework;
-  }): Promise<any> {
+  }): Promise<unknown> {
     console.log('app : submit results :', data);
 
-    const branch = await this.getGitBranchName();
+    // Start with posting run through result to project
+    let runThroughResult;
+
+    try {
+      const [branch, commit] = await this.getGitInfo();
+      const runThroughParams = { branch, commit, project_id: 2 };
+      console.log(runThroughParams);
+      runThroughResult = await this.httpClient.postRunThrough(runThroughParams);
+      console.log(runThroughResult);
+    } catch (err) {
+      exitWithError(err);
+    }
+
+    // Upload images from fs
 
     return null;
   }
