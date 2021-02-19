@@ -3,6 +3,7 @@ import { request, RequestOptions } from 'https';
 
 import { Project } from './models/project';
 import { RunThrough } from './models/run-through';
+import { PageCapture } from './models/page-capture';
 import { User } from './models/user';
 import { exitWithError } from './util';
 
@@ -100,7 +101,7 @@ export class HttpClient {
 
   /**
    * @example:
-   * curl -H "api_session_token haDZ3hKdX46sbaeTXVkHzLZ-gfeEp6IoNOqHmdGaXfDa7d0K4jEprWo61-58" \
+   * curl -H "api_session_token Qz4CQhbx52rEYCBlDU1mAnPC9R8fTvXM7xxSQV4uD-Ua3rhEcl9dHNqHea6J" \
       https://app-dev.emtrey.io/api/user
    */
   public async getUser(): Promise<User | null> {
@@ -109,9 +110,9 @@ export class HttpClient {
 
   /**
    * @example:
-   * curl -H "api_session_token: cGIiCtRA-fSufvEPjCn8e1dse6xwXKza0ELY2fY59Wds1PbLQKIL8QAxun2J" \
-   * -d "name=my_first_project&github_url=foo&org_id=1" \
-   * -X POST https://app-dev.emtrey.io/api/project
+   * curl -H "api_session_token: Qz4CQhbx52rEYCBlDU1mAnPC9R8fTvXM7xxSQV4uD-Ua3rhEcl9dHNqHea6J" \
+      -d "name=my_first_project&github_url=foo&org_id=1" \
+      -X POST https://app-dev.emtrey.io/api/project
    */
   public async createProject(): Promise<Project> {
     const params = {
@@ -119,33 +120,49 @@ export class HttpClient {
       github_url: null,
       org_id: null,
     };
-    return this.post<Project>('api/project', params);
+    return this.post<Project>('/api/project', params);
   }
 
   /**
    * @param:
-   * Commit must be unique or API will return 400 for the request.
+   * `branch` - May cause 500 if not master
    * @example:
-   * curl -H "api_session_token: 3FkUTJtI-MGuCStpqv6vHebRIUiWHho5-_Qf-hxqa3ACt7RqTiGt8wrg2iuG" \
-      -d "branch=feature/cool&commit=7ba25027c821425dfd87622d849d2669c6dcb813&project_id=36" \
+   * curl -H "api_session_token: Qz4CQhbx52rEYCBlDU1mAnPC9R8fTvXM7xxSQV4uD-Ua3rhEcl9dHNqHea6J" \
+      -d 'branch=master' \
+      -d 'commit=newcommit3' \
+      -d 'project_id=36' \
       -X POST https://app-dev.emtrey.io/api/run-through \
-      -vvv
+      -v
    */
   public async postRunThrough(params: {
     branch: string;
     commit: string;
     project_id: number;
   }): Promise<RunThrough> {
-    return this.post<RunThrough>('api/run-through', params);
+    return this.post<RunThrough>('/api/run-through', params);
   }
 
   /**
    * @example:
-   * curl -H "api_session_token: fYBIu4nP85qE-0xW0BhyooG5EdbPrUZ6QcwnkM3JCH3Ea30sO9unMNOOThsW" \
-      -d "page_route=/hellopage&page_title=HelloPage&run_through_id=34" \
+   * curl -H "api_session_token: Qz4CQhbx52rEYCBlDU1mAnPC9R8fTvXM7xxSQV4uD-Ua3rhEcl9dHNqHea6J" \
+      -d "page_route=/hellopage&page_title=HelloPage&run_through_id=48" \
       -X POST https://app-dev.emtrey.io/api/page-capture
    */
   public async postPageCapture(params: {
+    page_route: string;
+    page_title: string;
+    run_through_id: number;
+  }): Promise<PageCapture> {
+    return this.post<PageCapture>('/api/page-capture', params);
+  }
+
+  /**
+   * @example:
+   * curl -H "api_session_token: Qz4CQhbx52rEYCBlDU1mAnPC9R8fTvXM7xxSQV4uD-Ua3rhEcl9dHNqHea6J" \
+      -d "page_route=/hellopage&page_title=HelloPage&run_through_id=34" \
+      -X POST https://app-dev.emtrey.io/api/page-capture
+   */
+  public async postImagesToS3(params: {
     fileName: string;
     pageRoute: string;
     pageTitle: string;
@@ -196,6 +213,7 @@ export class HttpClient {
   }
 
   /**
+   * @todo
    * After all other API endpoints has been completed.
    */
   public async startDiff(): Promise<void> {

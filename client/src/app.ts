@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, rmdir } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { exec } from 'child_process';
 import { join } from 'path';
 import * as rimraf from 'rimraf';
@@ -114,7 +114,9 @@ class App {
    */
   public async run() {
     // Do all user stuff first
-    // await this.initializeUserToken();
+    await this.initializeUserToken();
+
+    process.exit();
 
     await this.submitResults({} as any);
 
@@ -247,6 +249,8 @@ class App {
 
   /**
    * Launch user's web browser to finalize user auth.
+   * @example:
+   * https://app-dev.emtrey.io/login?api_session_token=uV_aeGoSOAiOxTMr01j82mjrCEolEwY9-q1eTLI2bcU9UTo0_EDcQ4wmDny4
    */
   private async authorizeUser(sessionToken: string): Promise<User> {
     const url = `https://${ProjectConfig.apiURL}/api-login?api_session_token=${sessionToken}`;
@@ -288,10 +292,11 @@ class App {
 
     try {
       const [branch, commit] = await this.getGitInfo();
+      // @todo: Where do we get project id?
       const runThroughParams = { branch, commit, project_id: 2 };
-      console.log(runThroughParams);
+      // console.log(runThroughParams);
       runThroughResult = await this.httpClient.postRunThrough(runThroughParams);
-      console.log(runThroughResult);
+      // console.log(runThroughResult);
     } catch (err) {
       exitWithError(err);
     }
