@@ -1,7 +1,7 @@
 import puppeteer from 'puppeteer';
 
 export interface PluginResult<T> {
-  id: number;
+  pluginId: number;
   data: T;
 }
 
@@ -24,7 +24,7 @@ export abstract class Plugin<T> {
    */
   protected processRun(result: T): PluginResult<T> {
     return {
-      id: this.id,
+      pluginId: this.id,
       data: result,
     };
   }

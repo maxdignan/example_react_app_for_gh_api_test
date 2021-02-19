@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "start": "npm run build-ts && npm run serve",
-    "serve": "node dist/app.js --url=http://localhost:3000 --dir=/Users/brad/h2/emtrey/examples/react --app=example-react",
+    "serve": "DEFAULT_LIMIT=1 node dist/app.js --url=http://localhost:3000 --dir=/Users/brad/h2/emtrey/examples/react --app=example-react",
     "build": "rm -rf ./dist && npm run build-ts",
     "test": "jest --forceExit --coverage --verbose",
     "watch-test": "npm run test -- --watchAll",

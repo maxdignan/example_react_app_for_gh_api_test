@@ -18,7 +18,13 @@ export class HttpClient {
     if (!path.startsWith('/')) {
       path = `/${path}`;
     }
+
     const headers = token ? { api_session_token: token } : null;
+
+    if (!token) {
+      console.warn('http : no token supplied');
+    }
+
     const options = {
       hostname,
       path,
@@ -33,7 +39,8 @@ export class HttpClient {
         // 500's and 400's should reject, everything else passes
         const statusCode = res.statusCode?.toString();
         if (statusCode?.startsWith('5') || statusCode?.startsWith('4')) {
-          reject(res.statusMessage);
+          const message = `http : bad response for url : ${options.path}, status : ${res.statusMessage}`;
+          reject(message);
         }
 
         const chunks: Buffer[] = [];
@@ -70,11 +77,16 @@ export class HttpClient {
 
   constructor(private apiURL: string) {}
 
+  public setToken(token: string) {
+    this.token = 'Qz4CQhbx52rEYCBlDU1mAnPC9R8fTvXM7xxSQV4uD-Ua3rhEcl9dHNqHea6J';
+  }
+
   public get<T>(url: string): Promise<T> {
     return HttpClient.request('GET', this.apiURL, url, this.token);
   }
 
   public post<T>(url: string, params: { [key: string]: any }): Promise<T> {
+    console.log('http : post :', this.apiURL, url, this.token, params);
     return HttpClient.request('POST', this.apiURL, url, this.token, params);
   }
 
@@ -92,7 +104,7 @@ export class HttpClient {
         path,
       );
       console.log('http client : generated token :', res);
-      this.token = res.token;
+      // this.token = res.token;
     } catch (err) {
       exitWithError(err);
     }
@@ -139,7 +151,7 @@ export class HttpClient {
     commit: string;
     project_id: number;
   }): Promise<RunThrough> {
-    return this.post<RunThrough>('/api/run-through', params);
+    return this.post<RunThrough>('api/run-through', params);
   }
 
   /**
@@ -157,23 +169,21 @@ export class HttpClient {
   }
 
   /**
-   * @example:
-   * curl -H "api_session_token: Qz4CQhbx52rEYCBlDU1mAnPC9R8fTvXM7xxSQV4uD-Ua3rhEcl9dHNqHea6J" \
-      -d "page_route=/hellopage&page_title=HelloPage&run_through_id=34" \
-      -X POST https://app-dev.emtrey.io/api/page-capture
+   * @todo:
+   * We could get the buffer directly from puppeteer instead of reading from disk.
+   * Which might speed things up, but use more memory.
    */
-  public async postImagesToS3(params: {
-    fileName: string;
-    pageRoute: string;
-    pageTitle: string;
-    runThroughId: number;
-  }): Promise<void> {
+  public async postScreenshotToS3(
+    file: string,
+    pageCapture: PageCapture,
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
-      // const fileBuffer = readFileSync(__dirname + '/emtrey_screenshots.jpg');
-      const fileBuffer = readFileSync(__dirname + params.fileName);
+      const fileBuffer = readFileSync(file);
 
-      const path =
-        '/page-capture-dev/AzzXJNGP0uiVKsxjdGhJkPCO?contentType=binary%2Foctet-stream&x-amz-acl=public-read&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA4LXJZS2YDDWBHCC7%2F20210107%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20210107T202708Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=7d6471ca92f25aa01da159564780529fc03f189981b8da1c3b8ee93696bbf94b';
+      // Remove protocol and host from URL
+      const path = pageCapture.url_to_put_to
+        .split('https://s3.amazonaws.com/')
+        .pop();
 
       const options = {
         hostname: 's3.amazonaws.com',
@@ -185,9 +195,7 @@ export class HttpClient {
         console.log(`STATUS: ${res.statusCode}`);
         console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
 
-        res.on('data', chunk => {
-          console.log(`BODY: ${chunk}`);
-        });
+        res.on('data', chunk => console.log(`BODY: ${chunk}`));
 
         res.on('end', () => {
           console.log('No more data in response.');

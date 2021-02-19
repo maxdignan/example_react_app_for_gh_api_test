@@ -39,6 +39,6 @@ export class PageScreenShotPlugin extends Plugin<string> {
 
     // console.log(`page screenshot plugin : saving image as : ${path}`);
 
-    return super.processRun(fileName);
+    return super.processRun(path);
   }
 }

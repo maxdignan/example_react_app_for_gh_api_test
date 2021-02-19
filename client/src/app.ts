@@ -19,6 +19,7 @@ import { UserToken } from './models/user-token';
 import { User } from './models/user';
 import { GitInfo } from './models/git-info';
 import { RunThrough } from './models/run-through';
+import { PageCapture } from './models/page-capture';
 
 console.time('run');
 
@@ -106,6 +107,9 @@ class App {
       }
       sessionToken = token;
     }
+
+    this.httpClient.setToken(sessionToken);
+
     return userToken;
   }
 
@@ -115,12 +119,6 @@ class App {
   public async run() {
     // Do all user stuff first
     await this.initializeUserToken();
-
-    process.exit();
-
-    await this.submitResults({} as any);
-
-    return setTimeout(() => process.exit(), 2000);
 
     // Get parser config from user's project
     let parserConfig: ParserConfig;
@@ -138,7 +136,7 @@ class App {
     // Sniff out all project routes based on config
     const routes = await new URLParser(parserConfig!).getRoutes(this.args.dir!);
 
-    // Check localhost. @todo: Support skipping this.
+    // Check user's project is running locally
     await this.confirmProjectIsRunning(this.args.url!, routes[0]);
 
     // Prepare fs if project has config
@@ -285,7 +283,7 @@ class App {
     results: Result;
     framework: Framework;
   }): Promise<unknown> {
-    console.log('app : submit results :', data);
+    // console.log('app : submit results :', data);
 
     // Start with posting run through result to project
     let runThroughResult: RunThrough;
@@ -293,15 +291,34 @@ class App {
     try {
       const [branch, commit] = await this.getGitInfo();
       // @todo: Where do we get project id?
-      const runThroughParams = { branch, commit, project_id: 2 };
-      // console.log(runThroughParams);
+      // @todo: Remove hard code branch of `master`
+      const runThroughParams = {
+        branch: 'master',
+        commit: 'wtf',
+        project_id: 36,
+      };
       runThroughResult = await this.httpClient.postRunThrough(runThroughParams);
-      // console.log(runThroughResult);
+      console.log('app : results : submitted run through');
     } catch (err) {
       exitWithError(err);
     }
 
-    // Upload images from fs
+    // Once a run through identifier is obtained
+    // loop through results and post each to API
+    data.results.results.forEach(async result => {
+      console.log('result is: ', result);
+      const pageCaptureParams = {
+        page_route: result.url,
+        page_title: '',
+        run_through_id: runThroughResult.id,
+      };
+      let pageCapture: PageCapture;
+      try {
+        pageCapture = await this.httpClient.postPageCapture(pageCaptureParams);
+      } catch (err) {
+        exitWithError(err);
+      }
+    });
 
     return null;
   }
