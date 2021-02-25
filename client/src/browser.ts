@@ -20,7 +20,7 @@ export class Browser {
   static enabledPlugins: Plugin<unknown>[] = [
     new fromPlugins.PageScreenShotPlugin(),
     // new fromPlugins.ComponentScreenShotPlugin(),
-    // new fromPlugins.PageTitlePlugin(),
+    new fromPlugins.PageTitlePlugin(),
     // new fromPlugins.MetricsPlugin(),
   ];
 
@@ -340,7 +340,7 @@ export class Browser {
       buttonClasses = await allPropsForElement(params.page, 'button');
       colors = await getAllColorsInStyleSheets(params.page);
     } catch (err) {
-      console.log(err);
+      console.log('collect meta data : error :', err);
     }
 
     const metaData: MetaDataResult = {

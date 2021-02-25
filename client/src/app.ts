@@ -274,7 +274,7 @@ class App {
    * Submits results to API in multiple steps.
    */
   private async submitResults(data: Result): Promise<unknown> {
-    // console.log('app : submit results :', data);
+    console.log(`app : submit ${data.results.length} results`);
 
     // Start with posting run through result to project
     let runThroughResult: RunThrough;
@@ -298,14 +298,20 @@ class App {
     // loop through results and post each to API
 
     for (const result of data.results) {
-      console.log('\n\n', 'result', result, '\n\n');
+      console.log('\n\n', 'app : result :', result, '\n\n');
+
+      const { data } = result.plugins.find(
+        p => p.pluginId === 10,
+      ) as PluginResult<string>;
 
       const pageCaptureParams = {
         page_route: result.url,
-        page_title: 'Test', // Required by have content by API
+        page_title: data, // Required by have content by API
         // run_through_id: runThroughResult!.id,
         run_through_id: 48,
       };
+
+      // console.log('app : results : page capture params :', pageCaptureParams);
 
       let pageCapture: PageCapture;
 

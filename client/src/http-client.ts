@@ -218,7 +218,6 @@ export class HttpClient {
     const params = {
       s3_object_key: pageCapture.page_capture.s3_object_key,
     };
-    console.log('starting diff', params);
     return this.post('api/page-capture/done-uploading', params);
   }
 }
