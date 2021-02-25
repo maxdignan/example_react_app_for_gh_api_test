@@ -38,6 +38,7 @@ export class HttpClient {
       const req = request(options, res => {
         // 500's and 400's should reject, everything else passes
         const statusCode = res.statusCode?.toString();
+        console.log('http : status :', statusCode);
         if (statusCode?.startsWith('5') || statusCode?.startsWith('4')) {
           const message = `http : bad response for url : ${options.path}, status : ${res.statusMessage}`;
           reject(message);
@@ -66,6 +67,7 @@ export class HttpClient {
       });
 
       if (method === 'POST' && params) {
+        req.setHeader('content-type', 'application/json');
         req.write(JSON.stringify(params));
       }
 
@@ -86,7 +88,7 @@ export class HttpClient {
   }
 
   public post<T>(url: string, params: { [key: string]: any }): Promise<T> {
-    console.log('http : post :', this.apiURL, url, this.token, params);
+    console.log('http : post :', url, this.token, params);
     return HttpClient.request('POST', this.apiURL, url, this.token, params);
   }
 
@@ -97,18 +99,19 @@ export class HttpClient {
    */
   public async generateAndSetSessionToken(): Promise<string> {
     const path = '/api/user/generate-raw-api-session';
+    let token: string;
     try {
       const res = await HttpClient.request<{ token: string }>(
         'GET',
         this.apiURL,
         path,
       );
-      console.log('http client : generated token :', res);
-      // this.token = res.token;
+      // console.log('http client : generated token :', res);
+      token = res.token;
     } catch (err) {
       exitWithError(err);
     }
-    return this.token;
+    return token!;
   }
 
   /**
@@ -165,7 +168,7 @@ export class HttpClient {
     page_title: string;
     run_through_id: number;
   }): Promise<PageCapture> {
-    return this.post<PageCapture>('/api/page-capture', params);
+    return this.post<PageCapture>('api/page-capture', params);
   }
 
   /**
@@ -189,18 +192,17 @@ export class HttpClient {
         hostname: 's3.amazonaws.com',
         method: 'PUT',
         path,
+        headers: { api_session_token: this.token },
       };
+
+      console.log('options', options);
 
       const req = request(options, res => {
         console.log(`STATUS: ${res.statusCode}`);
         console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
 
         res.on('data', chunk => console.log(`BODY: ${chunk}`));
-
-        res.on('end', () => {
-          console.log('No more data in response.');
-          resolve();
-        });
+        res.on('end', () => resolve());
       });
 
       req.setHeader('content-type', 'binary/octet-stream');

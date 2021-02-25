@@ -5,10 +5,15 @@ import { exitWithError } from '../util';
 import { Route } from '../models/route';
 import { Plugin, PluginOptions } from '../models/plugin';
 
+export interface PageScreenshotPluginResult {
+  path: string;
+  fileName: string;
+}
+
 /**
  * Takes a full size page screenshot.
  */
-export class PageScreenShotPlugin extends Plugin<string> {
+export class PageScreenShotPlugin extends Plugin<PageScreenshotPluginResult> {
   id = 30;
   name = 'Page Screen Shot';
   description = '';
@@ -39,6 +44,6 @@ export class PageScreenShotPlugin extends Plugin<string> {
 
     // console.log(`page screenshot plugin : saving image as : ${path}`);
 
-    return super.processRun(path);
+    return super.processRun({ path, fileName });
   }
 }

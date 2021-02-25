@@ -20,6 +20,8 @@ import { User } from './models/user';
 import { GitInfo } from './models/git-info';
 import { RunThrough } from './models/run-through';
 import { PageCapture } from './models/page-capture';
+import { PluginResult } from './models/plugin';
+import { PageScreenshotPluginResult } from './plugins';
 
 console.time('run');
 
@@ -89,6 +91,7 @@ class App {
       console.log('auth : no user token, creating one...');
       // User token is not cached on fs, create one...
       sessionToken = await this.httpClient.generateAndSetSessionToken();
+      this.httpClient.setToken(sessionToken);
       console.log('auth : got session token :', sessionToken);
 
       // Then let user login manually via web app
@@ -106,9 +109,8 @@ class App {
         exitWithError('Invalid user token!');
       }
       sessionToken = token;
+      this.httpClient.setToken(sessionToken);
     }
-
-    this.httpClient.setToken(sessionToken);
 
     return userToken;
   }
@@ -143,23 +145,15 @@ class App {
     const path = await this.prepareScreenshotDirectory(this.args.dir!);
 
     // Browse to routes and execute plugins
-    const browser = new Browser();
-    const results = await browser.visitRoutes(
+    const results = await new Browser().visitRoutes(
       routes,
       this.args.url!,
       path,
       projectConfig,
     );
 
-    console.log('app : run : final results :');
-    console.log(results);
-
     // Send data to API
-    try {
-      await this.submitResults({ results, framework: parserConfig!.framework });
-    } catch (err) {
-      console.log('app : error');
-    }
+    await this.submitResults(results);
 
     // Cleanup local fs
     try {
@@ -279,46 +273,54 @@ class App {
   /**
    * Submits results to API in multiple steps.
    */
-  private async submitResults(data: {
-    results: Result;
-    framework: Framework;
-  }): Promise<unknown> {
+  private async submitResults(data: Result): Promise<unknown> {
     // console.log('app : submit results :', data);
 
     // Start with posting run through result to project
     let runThroughResult: RunThrough;
 
-    try {
-      const [branch, commit] = await this.getGitInfo();
-      // @todo: Where do we get project id?
-      // @todo: Remove hard code branch of `master`
-      const runThroughParams = {
-        branch: 'master',
-        commit: 'wtf',
-        project_id: 36,
-      };
-      runThroughResult = await this.httpClient.postRunThrough(runThroughParams);
-      console.log('app : results : submitted run through');
-    } catch (err) {
-      exitWithError(err);
-    }
+    // try {
+    //   const [branch, commit] = await this.getGitInfo();
+    //   // @todo: Where do we get project id?
+    //   // @todo: Remove hard code branch of `master`
+    //   const runThroughParams = {
+    //     branch: 'master',
+    //     commit,
+    //     project_id: 36,
+    //   };
+    //   runThroughResult = await this.httpClient.postRunThrough(runThroughParams);
+    //   console.log('app : results : submitted run through :', runThroughResult);
+    // } catch (err) {
+    //   exitWithError(err);
+    // }
 
     // Once a run through identifier is obtained
     // loop through results and post each to API
-    data.results.results.forEach(async result => {
-      console.log('result is: ', result);
+
+    for (const result of data.results) {
+      console.log('\n\n', 'result', result, '\n\n');
       const pageCaptureParams = {
         page_route: result.url,
-        page_title: '',
-        run_through_id: runThroughResult.id,
+        page_title: 'Test', // Required by have content by API
+        // run_through_id: runThroughResult!.id,
+        run_through_id: 48,
       };
       let pageCapture: PageCapture;
       try {
         pageCapture = await this.httpClient.postPageCapture(pageCaptureParams);
+        console.log('app : results : submitted page capture :', pageCapture);
+        const { data } = result.plugins.find(
+          p => p.pluginId === 30,
+        ) as PluginResult<PageScreenshotPluginResult>;
+        if (!data) {
+          exitWithError('Failed to find page screen shot plugin');
+        }
+        await this.httpClient.postScreenshotToS3(data.path, pageCapture);
+        console.log('app : results : submitted to s3');
       } catch (err) {
         exitWithError(err);
       }
-    });
+    }
 
     return null;
   }
