@@ -183,19 +183,11 @@ export class HttpClient {
     return new Promise((resolve, reject) => {
       const fileBuffer = readFileSync(file);
 
-      // Remove protocol and host from URL
-      const path = pageCapture.url_to_put_to
-        .split('https://s3.amazonaws.com/')
-        .pop();
-
       const options = {
         hostname: 's3.amazonaws.com',
         method: 'PUT',
-        path,
-        headers: { api_session_token: this.token },
+        path: pageCapture.url_to_put_to,
       };
-
-      console.log('options', options);
 
       const req = request(options, res => {
         console.log(`STATUS: ${res.statusCode}`);
@@ -222,12 +214,11 @@ export class HttpClient {
     });
   }
 
-  /**
-   * @todo
-   * After all other API endpoints has been completed.
-   */
-  public async startDiff(): Promise<void> {
-    const params = {};
-    // return this.post<{}>('api/page-capture/done-uploading', params);
+  public async startDiff(pageCapture: PageCapture): Promise<void> {
+    const params = {
+      s3_object_key: pageCapture.page_capture.s3_object_key,
+    };
+    console.log('starting diff', params);
+    return this.post('api/page-capture/done-uploading', params);
   }
 }

@@ -279,44 +279,55 @@ class App {
     // Start with posting run through result to project
     let runThroughResult: RunThrough;
 
-    // try {
-    //   const [branch, commit] = await this.getGitInfo();
-    //   // @todo: Where do we get project id?
-    //   // @todo: Remove hard code branch of `master`
-    //   const runThroughParams = {
-    //     branch: 'master',
-    //     commit,
-    //     project_id: 36,
-    //   };
-    //   runThroughResult = await this.httpClient.postRunThrough(runThroughParams);
-    //   console.log('app : results : submitted run through :', runThroughResult);
-    // } catch (err) {
-    //   exitWithError(err);
-    // }
+    try {
+      const [branch, commit] = await this.getGitInfo();
+      // @todo: Where do we get project id?
+      // @todo: Remove hard code branch of `master`
+      const runThroughParams = {
+        branch: 'master',
+        commit,
+        project_id: 36,
+      };
+      runThroughResult = await this.httpClient.postRunThrough(runThroughParams);
+      console.log('app : results : submitted run through :', runThroughResult);
+    } catch (err) {
+      exitWithError(err);
+    }
 
     // Once a run through identifier is obtained
     // loop through results and post each to API
 
     for (const result of data.results) {
       console.log('\n\n', 'result', result, '\n\n');
+
       const pageCaptureParams = {
         page_route: result.url,
         page_title: 'Test', // Required by have content by API
         // run_through_id: runThroughResult!.id,
         run_through_id: 48,
       };
+
       let pageCapture: PageCapture;
+
       try {
         pageCapture = await this.httpClient.postPageCapture(pageCaptureParams);
         console.log('app : results : submitted page capture :', pageCapture);
         const { data } = result.plugins.find(
           p => p.pluginId === 30,
         ) as PluginResult<PageScreenshotPluginResult>;
+
         if (!data) {
           exitWithError('Failed to find page screen shot plugin');
         }
+
         await this.httpClient.postScreenshotToS3(data.path, pageCapture);
         console.log('app : results : submitted to s3');
+
+        await this.httpClient.startDiff(pageCapture);
+        console.log(
+          'app : results : started diff :',
+          pageCapture.page_capture.s3_object_key,
+        );
       } catch (err) {
         exitWithError(err);
       }

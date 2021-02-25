@@ -19,7 +19,7 @@ export class PageScreenShotPlugin extends Plugin<PageScreenshotPluginResult> {
   description = '';
 
   getExtension(): 'jpeg' | 'png' {
-    return 'jpeg';
+    return 'png';
   }
 
   async run(page: puppeteer.Page, options: PluginOptions) {
@@ -36,7 +36,7 @@ export class PageScreenShotPlugin extends Plugin<PageScreenshotPluginResult> {
         path,
         fullPage: true,
         type: extension,
-        quality: 50,
+        quality: extension === 'jpeg' ? 50 : undefined,
       });
     } catch (err) {
       exitWithError(err);
