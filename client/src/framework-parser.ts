@@ -11,18 +11,14 @@ export class FrameworkParser {
 
   public async getFramework(): Promise<Framework> {
     if (await this.isProjectAngular()) {
-      console.log('project is angular');
       return Framework.Angular;
     }
     if (await this.isProjectReact()) {
-      console.log('project is react');
       return Framework.React;
     }
     if (await this.isProjectVue()) {
-      console.log('project is vue');
       return Framework.Vue;
     }
-    console.log('project is vanilla');
     return Framework.Vanilla;
   }
 
@@ -38,11 +34,10 @@ export class FrameworkParser {
    * Resolves `true` if any npm package exists with the name.
    */
   private findProjectPackage(packageName: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
       fs.access(`${this.dir}/node_modules/${packageName}`, err => {
         if (err) {
-          console.log(err);
-          return reject(false);
+          return resolve(false);
         }
         resolve(true);
       });

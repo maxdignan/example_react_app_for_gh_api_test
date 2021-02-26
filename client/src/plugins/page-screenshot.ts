@@ -5,30 +5,38 @@ import { exitWithError } from '../util';
 import { Route } from '../models/route';
 import { Plugin, PluginOptions } from '../models/plugin';
 
+export interface PageScreenshotPluginResult {
+  path: string;
+  fileName: string;
+}
+
 /**
  * Takes a full size page screenshot.
  */
-export class PageScreenShotPlugin extends Plugin<string> {
+export class PageScreenShotPlugin extends Plugin<PageScreenshotPluginResult> {
   id = 30;
   name = 'Page Screen Shot';
   description = '';
 
   getExtension(): 'jpeg' | 'png' {
-    return 'jpeg';
+    return 'png';
   }
 
   async run(page: puppeteer.Page, options: PluginOptions) {
     const url = page.url();
     const extension = this.getExtension();
-    const fileName = `${Route.getFileNameFromURL(url)}.${extension}`;
-    const path = join(options.path, fileName);
+    // Use route, or if empty assume home page
+    const fileName = options.routeId
+      ? `${Route.getFileNameFromURL(url)}`
+      : 'index';
+    const path = join(options.path, `${fileName}.${extension}`);
 
     try {
       await page.screenshot({
         path,
         fullPage: true,
         type: extension,
-        quality: 50,
+        quality: extension === 'jpeg' ? 50 : undefined,
       });
     } catch (err) {
       exitWithError(err);
@@ -36,6 +44,6 @@ export class PageScreenShotPlugin extends Plugin<string> {
 
     // console.log(`page screenshot plugin : saving image as : ${path}`);
 
-    return super.processRun(fileName);
+    return super.processRun({ path, fileName });
   }
 }

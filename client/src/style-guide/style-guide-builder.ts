@@ -3,10 +3,10 @@ import * as fs from 'fs';
 import puppeteer from 'puppeteer';
 import { compile } from 'handlebars';
 
-import { AnalyzedMetaData, MetaDataResult } from './models/screenshot-result';
-import { getElementClassCounts } from './util';
-import { Route } from './models/route';
-import { ProjectConfig } from './models/project-config';
+import { AnalyzedMetaData, MetaDataResult } from '../models/screenshot-result';
+import { getElementClassCounts } from '../util';
+import { Route } from '../models/route';
+import { ProjectConfig } from '../models/project-config';
 
 export class StlyeGuideBuilder {
   static fileName = 'style-guide.png';
@@ -19,7 +19,7 @@ export class StlyeGuideBuilder {
    * Read style guide template from disk.
    */
   static async getStyleGuideHTML(): Promise<string> {
-    let content: string;
+    let content = '';
     const path = 'src/style-guide/style-guide-template.html';
     try {
       content = await fs.promises.readFile(path, 'utf-8');
@@ -62,18 +62,12 @@ export class StlyeGuideBuilder {
       .reduce(
         (a, b) => (a[b] ? a[b]++ : (a[b] = 1)) && a,
         {} as { [key: string]: number },
-      );
+      ) as { [key: string]: number };
 
     const colors = Object.keys(colorMap)
       .sort((a, b) => (colorMap[a] > colorMap[b] ? -1 : 1))
       // Only get the first N colors
-      .slice(0, 10)
-      .map(key => key);
-
-    // const inputClasses = getElementClassCounts(
-    //   metaData.map(m => m.inputClasses),
-    // );
-    // console.log('input classes', inputClasses);
+      .slice(0, 10);
 
     const analyzed: AnalyzedMetaData = {
       buttonClasses,
@@ -124,9 +118,9 @@ export class StlyeGuideBuilder {
     if (this.metaDataWithInputElement) {
       // Custom input elements
       const matchedRoute = routes.find(
-        r => r.url === this.metaDataWithInputElement.url,
+        r => r.url === this.metaDataWithInputElement!.url,
       );
-      route = matchedRoute;
+      route = matchedRoute!;
     } else {
       // Normal input elements, use arbitrary route
       route = routes[0];
@@ -140,10 +134,10 @@ export class StlyeGuideBuilder {
    * @todo: Some research on the best output for this - we could do SVG/PDF or whatever
    */
   public async buildStyleGuide(page: puppeteer.Page) {
-    console.log('style guide builder : building style guide :', this.metaData);
+    // console.log('style guide builder : building style guide :', this.metaData);
 
     // Support custom input groups
-    let customInputHTML: string;
+    let customInputHTML = '';
     if (this.metaDataWithInputElement) {
       customInputHTML = await this.getCaustomInputHTML(page);
     }

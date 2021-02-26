@@ -13,10 +13,17 @@ import {
   getAllColorsInStyleSheets,
 } from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
-import { StlyeGuideBuilder } from './style-guide-builder';
+import { StlyeGuideBuilder } from './style-guide/style-guide-builder';
 import * as fromPlugins from './plugins';
 
 export class Browser {
+  static enabledPlugins: Plugin<unknown>[] = [
+    new fromPlugins.PageScreenShotPlugin(),
+    // new fromPlugins.ComponentScreenShotPlugin(),
+    new fromPlugins.PageTitlePlugin(),
+    // new fromPlugins.MetricsPlugin(),
+  ];
+
   private authorized = false;
   private launchConfig: LaunchOptions = {
     product: 'chrome', // Also firefox
@@ -43,7 +50,7 @@ export class Browser {
           el.dispatchEvent(new Event('change', options));
           return el.value;
         },
-        config.login.user,
+        config.login!.user,
       );
       const password = await page.$eval(
         'input[type="password"]',
@@ -55,7 +62,7 @@ export class Browser {
           el.dispatchEvent(new Event('change', options));
           return el.value;
         },
-        config.login.password,
+        config.login!.password,
       );
       console.log('browser : login form filled :', email + ' / ' + password);
       return true;
@@ -91,7 +98,7 @@ export class Browser {
     }
 
     // Credentials have been supplied, find input fields and set values.
-    if (config.login.user && config.login.password) {
+    if (config.login?.user && config.login?.password) {
       await this.fillInLoginForm(page, config);
     }
 
@@ -136,7 +143,7 @@ export class Browser {
     config: ProjectConfig;
     path: string;
     page: puppeteer.Page;
-  }): Promise<ScreenshotResult | null> {
+  }): Promise<ScreenshotResult> {
     const { route, serverUrl, config, path, page } = data;
 
     const url = route.getFullUrl(serverUrl, config);
@@ -152,7 +159,7 @@ export class Browser {
       const enabled = config.getURLProp(route.url, 'enabled');
       if (enabled === false) {
         console.log('browser : url is disabled :', url);
-        return null;
+        return {} as ScreenshotResult;
       }
       // Check for delay config
       const delay = config.getURLProp(route.url, 'delay');
@@ -210,7 +217,7 @@ export class Browser {
       routes = routes.slice(0, config.limit);
     }
 
-    let page: puppeteer.Page;
+    let page: puppeteer.Page | null;
     let hasVisitedLogin = false;
 
     const results: ScreenshotResult[] = [];
@@ -218,6 +225,7 @@ export class Browser {
 
     // Some route needs to auth, lets auth first then go take shots.
     const willAuth = routes.some(r => config.willAuthorizeURL(r.url));
+    console.log('browser : will auth :', willAuth);
 
     if (!this.authorized && willAuth) {
       // Hit the login route first to capture unauthorized/login view.
@@ -226,14 +234,16 @@ export class Browser {
         // New page for login route.
         page = await browser.newPage();
         // Go and snap login.
-        const loginResult = await this.visitRoute({
+        const loginResult = (await this.visitRoute({
           route: loginRoute,
           serverUrl,
           config,
           path,
           page,
-        });
-        hasVisitedLogin = results.push(loginResult) && true;
+        })) as ScreenshotResult;
+        results.push(loginResult);
+        hasVisitedLogin = true;
+        page.close();
       }
       // Below goes to auth before navigating to other routes, but only once.
       // console.log('browser : authorize first');
@@ -246,7 +256,7 @@ export class Browser {
     for (const route of routes) {
       /** @todo: We should be closing this page. */
       // const reusedPage = page || (await browser.newPage());
-      const reusedPage = await browser.newPage();
+      const page = await browser.newPage();
 
       if (route.url === config.getLoginUrl() && hasVisitedLogin) {
         // We already have login screen.
@@ -254,45 +264,22 @@ export class Browser {
         continue;
       }
 
-      await this.authorize(reusedPage, serverUrl, config);
-
-      // Testing. Seems we cannot catch error messages from thrown errors; at least in NG.
-      // reusedPage.on('console', e => {
-      //   if (e.type().toLowerCase() === 'error') {
-      //     console.log(
-      //       'page : console error : ' + e.args(),
-      //       e.location(),
-      //       e.text(),
-      //     );
-      //   }
-      // });
-
-      // Testing, we can definitely make use of this.
-      // reusedPage.on('requestfailed', req => {
-      //   console.log(
-      //     'page : request failed :',
-      //     req.url(),
-      //     req.method(),
-      //     // req.response(),
-      //   );
-      // });
+      if (willAuth) {
+        await this.authorize(page, serverUrl, config);
+      }
 
       const params = {
         route,
         serverUrl,
         config,
         path,
-        page: reusedPage,
+        page,
       };
 
       results.push(await this.visitRoute(params));
       metaData.push(await this.collectMetaData(params));
 
-      // Only reuse the first page - seems to work best with example NG app
-      await page?.close();
-      await reusedPage.close();
-
-      page = null;
+      await page.close();
     }
 
     // Build style guide after all route visits.
@@ -318,13 +305,7 @@ export class Browser {
    * Get all enabled plugins for this project. Defaults to all for now.
    */
   private getPlugins() {
-    const allPlugins: Plugin<unknown>[] = [
-      // new fromPlugins.PageTitlePlugin(),
-      // new fromPlugins.MetricsPlugin(),
-      // new fromPlugins.PageScreenShotPlugin(),
-      new fromPlugins.ComponentScreenShotPlugin(),
-    ];
-    return allPlugins;
+    return Browser.enabledPlugins;
   }
 
   private async runPlugins(
@@ -359,7 +340,7 @@ export class Browser {
       buttonClasses = await allPropsForElement(params.page, 'button');
       colors = await getAllColorsInStyleSheets(params.page);
     } catch (err) {
-      console.log(err);
+      console.log('collect meta data : error :', err);
     }
 
     const metaData: MetaDataResult = {

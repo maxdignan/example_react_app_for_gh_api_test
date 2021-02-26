@@ -4,12 +4,6 @@ import puppeteer from 'puppeteer';
 import { AppArgs } from './models/args';
 
 /**
- * Strip non-unique values in array.
- */
-const uniqueArray = (value: unknown, index: number, self: unknown[]) =>
-  self.indexOf(value) === index;
-
-/**
  * Turn process arguments into object. Example:
  * node config/build.js -lHRs --ip=$HOST --port=$PORT --env=dev
 output
@@ -53,6 +47,7 @@ export const uniqueArrayBy = <T>(key: string, arr: T[]): T[] =>
 
 /**
  * Promisified wrapper around http get.
+ * @deprecated
  */
 export const xhrGet = (url: string): Promise<boolean> => {
   return new Promise((resolve, reject) => {
@@ -66,7 +61,7 @@ export const xhrGet = (url: string): Promise<boolean> => {
  * Logs error and quits node process.
  */
 export const exitWithError = (err: string) => {
-  console.error(err);
+  console.error('app : fatal error :', err);
   process.exit(0);
 };
 
@@ -160,4 +155,33 @@ export const getAllColorsInStyleSheets = async (
   );
 
   return colors;
+};
+
+/**
+ * Open OS-default web browser and go to url.
+ */
+export const openBrowserTo = (url: string) => {
+  const start =
+    process.platform == 'darwin'
+      ? 'open'
+      : process.platform == 'win32'
+      ? 'start'
+      : 'xdg-open';
+  require('child_process').exec(start + ' ' + url);
+};
+
+/**
+ * Example.
+ */
+
+export const Example = () => {
+  const readline = require('readline').createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  readline.question('Enter your Emtry login email: ', (name: string) => {
+    console.log(`Hi ${name}!`);
+    readline.close();
+  });
 };
