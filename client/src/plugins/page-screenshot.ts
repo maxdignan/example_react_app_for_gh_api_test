@@ -8,15 +8,16 @@ import { Plugin, PluginOptions } from '../models/plugin';
 export interface PageScreenshotPluginResult {
   path: string;
   fileName: string;
+  viewport: puppeteer.Viewport;
 }
 
 /**
  * Takes a full size page screenshot.
  */
 export class PageScreenShotPlugin extends Plugin<PageScreenshotPluginResult> {
-  id = 30;
-  name = 'Page Screen Shot';
-  description = '';
+  static id = 1;
+  public name = 'Page Screen Shot';
+  public description = '';
 
   getExtension(): 'jpeg' | 'png' {
     return 'png';
@@ -30,6 +31,7 @@ export class PageScreenShotPlugin extends Plugin<PageScreenshotPluginResult> {
       ? `${Route.getFileNameFromURL(url)}`
       : 'index';
     const path = join(options.path, `${fileName}.${extension}`);
+    const viewport = page.viewport();
 
     try {
       await page.screenshot({
@@ -42,8 +44,7 @@ export class PageScreenShotPlugin extends Plugin<PageScreenshotPluginResult> {
       exitWithError(err);
     }
 
-    // console.log(`page screenshot plugin : saving image as : ${path}`);
-
-    return super.processRun({ path, fileName });
+    const result = { path, fileName, viewport };
+    return super.processRun(PageScreenShotPlugin.id, result);
   }
 }

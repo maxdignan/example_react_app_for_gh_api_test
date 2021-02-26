@@ -7,9 +7,9 @@ import { ScreenshotResultMetrics } from '../models/screenshot-result';
  * Collects various performance and/or rendering metrics.
  */
 export class MetricsPlugin extends Plugin<ScreenshotResultMetrics> {
-  id = 20;
-  name = 'Metrics';
-  description = '';
+  static id = 2;
+  public name = 'Metrics';
+  public description = '';
 
   /**
    * Parse puppetter-native metrics into proprietary.
@@ -24,6 +24,6 @@ export class MetricsPlugin extends Plugin<ScreenshotResultMetrics> {
 
   async run(page: puppeteer.Page) {
     const data = this.parseMetrics(await page.metrics());
-    return super.processRun(data);
+    return super.processRun(MetricsPlugin.id, data);
   }
 }

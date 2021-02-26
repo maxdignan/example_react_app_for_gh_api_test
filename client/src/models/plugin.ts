@@ -11,7 +11,6 @@ export interface PluginOptions {
 }
 
 export abstract class Plugin<T> {
-  abstract id: number;
   abstract name: string;
   abstract description: string;
   abstract run(
@@ -22,9 +21,9 @@ export abstract class Plugin<T> {
   /**
    * Process the raw response from plugin execution.
    */
-  protected processRun(result: T): PluginResult<T> {
+  protected processRun(pluginId: number, result: T): PluginResult<T> {
     return {
-      pluginId: this.id,
+      pluginId,
       data: result,
     };
   }

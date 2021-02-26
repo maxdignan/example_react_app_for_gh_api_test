@@ -17,6 +17,14 @@ import { StlyeGuideBuilder } from './style-guide/style-guide-builder';
 import * as fromPlugins from './plugins';
 
 export class Browser {
+  static viewports = [
+    { w: 1400, h: 1200, mobile: false },
+    { w: 375, h: 812, mobile: true },
+  ];
+
+  // Can be thought of as dpr of screenshot
+  static deviceScaleFactor = 1;
+
   static enabledPlugins: Plugin<unknown>[] = [
     new fromPlugins.PageScreenShotPlugin(),
     // new fromPlugins.ComponentScreenShotPlugin(),
@@ -143,7 +151,7 @@ export class Browser {
     config: ProjectConfig;
     path: string;
     page: puppeteer.Page;
-  }): Promise<ScreenshotResult> {
+  }): Promise<ScreenshotResult[]> {
     const { route, serverUrl, config, path, page } = data;
 
     const url = route.getFullUrl(serverUrl, config);
@@ -159,7 +167,8 @@ export class Browser {
       const enabled = config.getURLProp(route.url, 'enabled');
       if (enabled === false) {
         console.log('browser : url is disabled :', url);
-        return {} as ScreenshotResult;
+        // URL is not enabled, skip running all plugins
+        return [];
       }
       // Check for delay config
       const delay = config.getURLProp(route.url, 'delay');
@@ -170,34 +179,42 @@ export class Browser {
       }
     }
 
-    // Set viewport dimensions
-    /** @todo: Configure this for each route? */
-    await page.setViewport({
-      width: 1400,
-      height: 1200,
-      // deviceScaleFactor: 2,
-    });
+    let screenShotResults: ScreenshotResult[] = [];
 
-    let plugins: PluginResult<unknown>[] = [];
+    for (const viewport of Browser.viewports) {
+      console.log('browser : visit route : viewport', viewport);
 
-    // Brief pause before executing plugins.
-    // This appears to resolve plugin component cropping/dimension issues.
-    await page.waitFor(10);
-
-    try {
-      plugins = await this.runPlugins(page, {
-        path,
-        routeId: Route.getFileNameFromURL(url),
+      // Set viewport dimensions
+      await page.setViewport({
+        width: viewport.w,
+        height: viewport.h,
+        isMobile: viewport.mobile,
+        deviceScaleFactor: Browser.deviceScaleFactor,
       });
-    } catch (err) {
-      exitWithError(err);
+
+      let plugins: PluginResult<unknown>[] = [];
+
+      // Brief pause before executing plugins.
+      // This appears to resolve plugin component cropping/dimension issues.
+      await page.waitFor(10);
+
+      try {
+        plugins = await this.runPlugins(page, {
+          path,
+          routeId: Route.getFileNameFromURL(url),
+        });
+      } catch (err) {
+        exitWithError(err);
+      }
+
+      console.log('browser : visit route : completed');
+
+      screenShotResults.push({ url, plugins });
     }
 
-    console.log('browser : visit done \n \n');
+    // const result: ScreenshotResult = { url, plugins };
 
-    const result: ScreenshotResult = { url, plugins };
-
-    return result;
+    return screenShotResults;
   }
 
   /**
@@ -234,14 +251,14 @@ export class Browser {
         // New page for login route.
         page = await browser.newPage();
         // Go and snap login.
-        const loginResult = (await this.visitRoute({
+        const loginResult = await this.visitRoute({
           route: loginRoute,
           serverUrl,
           config,
           path,
           page,
-        })) as ScreenshotResult;
-        results.push(loginResult);
+        });
+        results.push(...loginResult);
         hasVisitedLogin = true;
         page.close();
       }
@@ -276,7 +293,7 @@ export class Browser {
         page,
       };
 
-      results.push(await this.visitRoute(params));
+      results.push(...(await this.visitRoute(params)));
       metaData.push(await this.collectMetaData(params));
 
       await page.close();
