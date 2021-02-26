@@ -8,7 +8,6 @@ import { Plugin, PluginOptions } from '../models/plugin';
 export interface PageScreenshotPluginResult {
   path: string;
   fileName: string;
-  viewport: puppeteer.Viewport;
 }
 
 /**
@@ -26,12 +25,14 @@ export class PageScreenShotPlugin extends Plugin<PageScreenshotPluginResult> {
   async run(page: puppeteer.Page, options: PluginOptions) {
     const url = page.url();
     const extension = this.getExtension();
+    const viewport = page.viewport();
     // Use route, or if empty assume home page
-    const fileName = options.routeId
+    const urlNameForFile = options.routeId
       ? `${Route.getFileNameFromURL(url)}`
       : 'index';
+    const viewportNameForFile = `${viewport.width}x${viewport.height}`;
+    const fileName = `${urlNameForFile}-${viewportNameForFile}`;
     const path = join(options.path, `${fileName}.${extension}`);
-    const viewport = page.viewport();
 
     try {
       await page.screenshot({
@@ -44,7 +45,7 @@ export class PageScreenShotPlugin extends Plugin<PageScreenshotPluginResult> {
       exitWithError(err);
     }
 
-    const result = { path, fileName, viewport };
+    const result = { path, fileName };
     return super.processRun(PageScreenShotPlugin.id, result);
   }
 }

@@ -194,7 +194,7 @@ export class Browser {
 
       let plugins: PluginResult<unknown>[] = [];
 
-      // Brief pause before executing plugins.
+      // Brief pause before executing plugins
       // This appears to resolve plugin component cropping/dimension issues.
       await page.waitFor(10);
 
