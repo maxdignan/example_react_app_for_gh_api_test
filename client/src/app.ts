@@ -26,6 +26,7 @@ import { PageScreenshotPluginResult } from './plugins';
 console.time('run');
 
 class App {
+  static isDryRun = process.env.DRY_RUN ? !!+process.env.DRY_RUN : false;
   private projectConfig: ProjectConfig;
   private httpClient = new HttpClient(ProjectConfig.apiURL);
 
@@ -276,9 +277,18 @@ class App {
   private async submitResults(data: Result): Promise<unknown> {
     console.log(`app : submit ${data.results.length} results`);
 
+    if (App.isDryRun) {
+      console.log('\n\n***********************');
+      console.log('app : dry run detected');
+      console.log('***********************');
+      for (const result of data.results) {
+        console.log('\napp : result :', result, '\n');
+      }
+      return;
+    }
+
     // Start with posting run through result to project
     let runThroughResult: RunThrough;
-
     try {
       const [branch, commit] = await this.getGitInfo();
       // @todo: Where do we get project id?
@@ -298,7 +308,7 @@ class App {
     // loop through results and post each to API
 
     for (const result of data.results) {
-      console.log('\n\n', 'app : result :', result, '\n\n');
+      // console.log('\n\n', 'app : result :', result, '\n\n');
 
       const { data } = result.plugins.find(
         p => p.pluginId === 10,
