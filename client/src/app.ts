@@ -48,7 +48,7 @@ class App {
       // console.log('app : loaded project config :', config);
     } catch (err) {
       config = ProjectConfig.createBlank();
-      console.log(`app : could not load project config at ${file}`);
+      // console.log(`app : no project config at ${file}`);
     }
     return config;
   }
@@ -124,8 +124,10 @@ class App {
    * Gather all routes and navigate to URLs to take screenshots.
    */
   public async run() {
-    // Do all user stuff first
-    await this.initializeUserToken();
+    if (!App.isDryRun) {
+      // Do all user stuff first
+      await this.initializeUserToken();
+    }
 
     // Get parser config from user's project
     let parserConfig: ParserConfig;
