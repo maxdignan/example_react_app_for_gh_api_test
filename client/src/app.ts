@@ -21,7 +21,11 @@ import { GitInfo } from './models/git-info';
 import { RunThrough } from './models/run-through';
 import { PageCapture } from './models/page-capture';
 import { PluginResult } from './models/plugin';
-import { PageScreenshotPluginResult } from './plugins';
+import {
+  PageScreenShotPlugin,
+  PageScreenshotPluginResult,
+  PageTitlePlugin,
+} from './plugins';
 
 console.time('run');
 
@@ -311,7 +315,7 @@ class App {
       // console.log('\n\n', 'app : result :', result, '\n\n');
 
       const { data } = result.plugins.find(
-        p => p.pluginId === 10,
+        p => p.pluginId === PageTitlePlugin.id,
       ) as PluginResult<string>;
 
       const pageCaptureParams = {
@@ -329,7 +333,7 @@ class App {
         pageCapture = await this.httpClient.postPageCapture(pageCaptureParams);
         console.log('app : results : submitted page capture :', pageCapture);
         const { data } = result.plugins.find(
-          p => p.pluginId === 30,
+          p => p.pluginId === PageScreenShotPlugin.id,
         ) as PluginResult<PageScreenshotPluginResult>;
 
         if (!data) {

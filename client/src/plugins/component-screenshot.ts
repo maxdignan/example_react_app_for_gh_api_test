@@ -16,9 +16,9 @@ export type ExtendedComponentScreenShotPluginData = {
  * Takes weighted component screenshots.
  */
 export class ComponentScreenShotPlugin extends Plugin<any> {
-  id = 40;
-  name = 'Component Screen Shot';
-  description = '';
+  static id = 4;
+  public name = 'Component Screen Shot';
+  public description = '';
 
   static getFileNameFromScriptData(
     data: string,
@@ -81,6 +81,6 @@ export class ComponentScreenShotPlugin extends Plugin<any> {
 
     console.log('component screenshot plugin : screenshots :', screenshots);
 
-    return super.processRun(screenshots);
+    return super.processRun(ComponentScreenShotPlugin.id, screenshots);
   }
 }
