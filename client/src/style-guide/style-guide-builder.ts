@@ -16,6 +16,43 @@ export class StlyeGuideBuilder {
   private pathToSaveImage: string;
 
   /**
+   * Extract commonly-used colors on given page via document's stylesheets.
+   */
+  static getAllColorsInStyleSheets = async (
+    page: puppeteer.Page,
+  ): Promise<string[]> => {
+    const colors = await page.evaluate(() =>
+      Array.from(document.styleSheets)
+        // Only ones that belong to this domain
+        // This is to avoid the DOM Exception: Failed to read the 'cssRules' property from 'CSSStyleSheet':
+        .filter(
+          styleSheet =>
+            !styleSheet.href ||
+            styleSheet.href.startsWith(window.location.origin),
+        )
+        // Get all background and foreground colors from all elements
+        .flatMap(s =>
+          Array.from(s.rules)
+            .filter(r => r instanceof CSSStyleRule)
+            .map((r: CSSStyleRule) => r.style.backgroundColor || r.style.color),
+        )
+        // Don't care for non-color values
+        .filter(c => !!c && c !== 'inherit' && c !== 'transparent')
+        // Strip out inlined `--var` values
+        // Example:
+        // rgba(255, 183, 0, var(--bg-opacity)) -> rgba(255, 183, 0)
+        .map(c => c.replace(/,.var?.+(?=\))/, ''))
+        // Only unique values
+        .filter(
+          (value: string, index: number, self: string[]) =>
+            self.indexOf(value) === index,
+        ),
+    );
+
+    return colors;
+  };
+
+  /**
    * Read style guide template from disk.
    */
   static async getStyleGuideHTML(): Promise<string> {

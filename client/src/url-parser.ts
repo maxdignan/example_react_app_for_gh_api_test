@@ -3,6 +3,7 @@ const glob = require('glob');
 
 import { ParserConfig, Framework, FileExtension } from './models/parser';
 import { Route } from './models/route';
+import { ComponentScreenShotPlugin } from './plugins';
 import { exitWithError, uniqueArrayBy } from './util';
 
 /**
@@ -216,6 +217,7 @@ export class URLParser {
 
   /**
    * Parse angular route files into route blocks.
+   * @todo: There is a bug in the recursive logic for child paths.
    */
   private parseVueRoutes(blocks: string[], routes: Route[] = []): Route[] {
     let currentPath = '';
@@ -226,7 +228,8 @@ export class URLParser {
       const [path] = paths;
       // Must have value, cannot be wildcard
       if (path && path !== '**') {
-        if (block.includes('children:')) {
+        // Disallow root (/) from having children
+        if (path !== '/' && block.includes('children:')) {
           // Child paths exist, recurse
           currentPath = path;
           this.parseVueRoutes(pathBlocks, routes);
@@ -237,7 +240,6 @@ export class URLParser {
         }
       }
     }
-
     return routes;
   }
 }

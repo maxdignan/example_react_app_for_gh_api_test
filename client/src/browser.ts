@@ -7,11 +7,7 @@ import {
   MetaDataResult,
   Result,
 } from './models/screenshot-result';
-import {
-  exitWithError,
-  allPropsForElement,
-  getAllColorsInStyleSheets,
-} from './util';
+import { exitWithError, allPropsForElement } from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
 import { StlyeGuideBuilder } from './style-guide/style-guide-builder';
 import * as fromPlugins from './plugins';
@@ -355,7 +351,7 @@ export class Browser {
 
     try {
       buttonClasses = await allPropsForElement(params.page, 'button');
-      colors = await getAllColorsInStyleSheets(params.page);
+      colors = await StlyeGuideBuilder.getAllColorsInStyleSheets(params.page);
     } catch (err) {
       console.log('collect meta data : error :', err);
     }
