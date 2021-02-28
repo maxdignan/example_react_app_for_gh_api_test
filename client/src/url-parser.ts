@@ -3,6 +3,7 @@ const glob = require('glob');
 
 import { ParserConfig, Framework, FileExtension } from './models/parser';
 import { Route } from './models/route';
+import { ComponentScreenShotPlugin } from './plugins';
 import { exitWithError, uniqueArrayBy } from './util';
 
 /**
@@ -59,7 +60,7 @@ export class URLParser {
     } else if (this.framework === Framework.React) {
       routes = await this.getReactProjectRoutes(files);
     } else if (this.framework === Framework.Vue) {
-      throw new Error('Framework not implemented yet');
+      routes = await this.getVueProjectRoutes(files);
     } else {
       throw new Error('Framework not implemented yet');
     }
@@ -71,7 +72,6 @@ export class URLParser {
 
   /**
    * Get all routes from an angular project.
-   * All routes should be defined in a `routing` module, if not they suck.
    */
   private async getAngularProjectRoutes(files: string[]): Promise<Route[][]> {
     const routerFiles = files.filter(
@@ -96,6 +96,22 @@ export class URLParser {
     );
     const routes = await Promise.all(
       routerFiles.map(router => this.parseReactRouter(router)),
+    );
+    return routes;
+  }
+
+  /**
+   * Get all routes from an vue project.
+   */
+  private async getVueProjectRoutes(files: string[]): Promise<Route[][]> {
+    const routerFiles = files.filter(
+      file =>
+        file.includes('routing.') ||
+        file.includes('router.') ||
+        file.includes('index.'),
+    );
+    const routes = await Promise.all(
+      routerFiles.map(router => this.parseVueRouter(router)),
     );
     return routes;
   }
@@ -186,5 +202,44 @@ export class URLParser {
       .filter(p => !!p);
 
     return this.parseReactRoutes(paths);
+  }
+
+  /**
+   * Main entry for parsing vue router files.
+   */
+  private async parseVueRouter(path: string): Promise<Route[]> {
+    const fileContent = await fs.promises.readFile(path, 'utf-8');
+    const routes: string[] = fileContent
+      .split(/{(\n|\r)+/)
+      .filter(p => p.includes('path:'));
+    return this.parseVueRoutes(routes);
+  }
+
+  /**
+   * Parse angular route files into route blocks.
+   * @todo: There is a bug in the recursive logic for child paths.
+   */
+  private parseVueRoutes(blocks: string[], routes: Route[] = []): Route[] {
+    let currentPath = '';
+
+    for (const block of blocks) {
+      const pathBlocks: string[] = block.match(/path:\s.+/gi)!;
+      const paths = pathBlocks.map(b => b.replace(/\'|\"|path:\s|,/g, ''));
+      const [path] = paths;
+      // Must have value, cannot be wildcard
+      if (path && path !== '**') {
+        // Disallow root (/) from having children
+        if (path !== '/' && block.includes('children:')) {
+          // Child paths exist, recurse
+          currentPath = path;
+          this.parseVueRoutes(pathBlocks, routes);
+        } else {
+          // No child paths, push current
+          const url = currentPath ? `${currentPath}/${path}` : path;
+          routes.push(Route.fromURL(url));
+        }
+      }
+    }
+    return routes;
   }
 }
