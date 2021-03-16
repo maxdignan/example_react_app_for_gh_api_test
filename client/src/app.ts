@@ -88,9 +88,13 @@ class App {
   /**
    * Get user from cache or create new.
    */
-  private async initializeUserToken() {
+  private async initializeUserToken(): Promise<UserToken> {
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS();
+
+    if (App.isDryRun) {
+      return UserToken.fromJSON('token=dry-run-token');
+    }
 
     if (!userToken) {
       console.log('auth : no user token, creating one...');
@@ -117,7 +121,7 @@ class App {
       this.httpClient.setToken(sessionToken);
     }
 
-    return userToken;
+    return userToken!;
   }
 
   /**
