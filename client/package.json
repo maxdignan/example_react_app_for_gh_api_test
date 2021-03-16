@@ -14,7 +14,6 @@
     "debug": "npm run build && npm run watch-debug"
   },
   "dependencies": {
-    "form-data": "^3.0.0",
     "glob": "^7.1.6",
     "handlebars": "^4.7.6",
     "puppeteer": "^5.2.1",
