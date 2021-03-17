@@ -20,7 +20,7 @@ export class ProjectConfig {
   /** Defaults */
   static defaultLimit = process.env.DEFAULT_LIMIT
     ? +process.env.DEFAULT_LIMIT
-    : 99;
+    : 10;
   static defaultDir = '.emtrey_tmp';
   static defaultLoginUrl = 'login';
 

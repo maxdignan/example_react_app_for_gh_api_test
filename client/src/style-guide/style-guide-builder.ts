@@ -7,9 +7,12 @@ import { AnalyzedMetaData, MetaDataResult } from '../models/screenshot-result';
 import { getElementClassCounts } from '../util';
 import { Route } from '../models/route';
 import { ProjectConfig } from '../models/project-config';
+import { StyleGuideParam, StyleGuideTemplateId } from './style-guide-param';
 
-export class StlyeGuideBuilder {
+export class StyleGuideBuilder {
   static fileName = 'style-guide.png';
+  static templates = [{ id: StyleGuideTemplateId.button, fileName: 'button' }];
+
   public metaDataWithInputElement?: MetaDataResult;
 
   private metaData: AnalyzedMetaData;
@@ -55,13 +58,27 @@ export class StlyeGuideBuilder {
   /**
    * Read style guide template from disk.
    */
-  static async getStyleGuideHTML(): Promise<string> {
+  // static async getStyleGuideHTML(): Promise<string> {
+  //   let content = '';
+  //   const path = 'src/style-guide/style-guide-template.html';
+  //   try {
+  //     content = await fs.promises.readFile(path, 'utf-8');
+  //   } catch (err) {
+  //     console.log(err);
+  //   }
+  //   return content;
+  // }
+
+  /**
+   * Read style guide template from disk by name.
+   */
+  static async getStyleGuideHTML(templateName: string): Promise<string> {
     let content = '';
-    const path = 'src/style-guide/style-guide-template.html';
+    const path = `src/style-guide/templates/${templateName}.html`;
     try {
       content = await fs.promises.readFile(path, 'utf-8');
     } catch (err) {
-      console.error(err);
+      console.log(err);
     }
     return content;
   }
@@ -168,15 +185,23 @@ export class StlyeGuideBuilder {
 
   /**
    * Build HTML template on page using meta data.
-   * @todo: Some research on the best output for this - we could do SVG/PDF or whatever
    */
   public async buildStyleGuide(page: puppeteer.Page) {
-    // console.log('style guide builder : building style guide :', this.metaData);
+    /** @todo: Need to make this dynamic based off template content */
+    await page.setViewport({
+      width: 400,
+      height: 300,
+      deviceScaleFactor: 2,
+    });
 
     // Support custom input groups
     let customInputHTML = '';
     if (this.metaDataWithInputElement) {
-      customInputHTML = await this.getCaustomInputHTML(page);
+      try {
+        customInputHTML = await this.getCaustomInputHTML(page);
+      } catch (err) {
+        console.log('style guide builder : failed to find custom input html');
+      }
     }
 
     // Define custom variables transcluded in template html
@@ -185,20 +210,78 @@ export class StlyeGuideBuilder {
       customInputHTML,
     };
 
-    // Compile template
-    const html = await StlyeGuideBuilder.getStyleGuideHTML();
-    const compiledStyleGuideTemplate = compile(html)(templateParams);
+    const templateScreenshots: {
+      id: StyleGuideTemplateId;
+      screenshot: string;
+    }[] = [];
 
-    // Place compiled html in host page
-    await page.evaluate(html => {
-      document.body.innerHTML = html;
-    }, compiledStyleGuideTemplate);
+    /**
+     * @todo:
+     * - Filter out templates if components don't exist,
+     *   for example if no button classes are found, skip the screenshot.
+     * - Show element states like hover, focus, etc.
+     */
+    for (const template of StyleGuideBuilder.templates) {
+      // Compile template
+      const html = await StyleGuideBuilder.getStyleGuideHTML(template.fileName);
+      const compiledStyleGuideTemplate = compile(html)(templateParams);
+      // console.log('\n\n');
+      // console.log('style guide builder : template for', template.fileName);
+      // console.log(compiledStyleGuideTemplate);
+      // console.log('\n\n');
 
-    // Focus input elements
-    await page.focus('.focus input');
+      // Place compiled html in host page
+      await page.evaluate(html => {
+        document.body.innerHTML = html;
+      }, compiledStyleGuideTemplate);
 
-    // Take shot
-    const path = join(this.pathToSaveImage, StlyeGuideBuilder.fileName);
-    return await page.screenshot({ path, fullPage: true });
+      // Take shot
+      const path = join(this.pathToSaveImage, StyleGuideBuilder.fileName);
+      const screenshot = await page.screenshot({ path });
+      // const screenshot = await page.screenshot({ encoding: 'base64' });
+      templateScreenshots.push({ id: template.id, screenshot: '' });
+    }
+
+    // Join button screenshots and param data
+    const buttonImg = templateScreenshots.find(
+      ts => ts.id === StyleGuideTemplateId.button,
+    );
+    const buttonParams = this.getButtonParams(
+      this.metaData.buttonClasses,
+      buttonImg!.screenshot,
+    );
+
+    // Colors get no screenshots
+    const colorParams = this.getColorParams(this.metaData.colors);
+
+    // Create params to send to API
+    const params: StyleGuideParam[] = colorParams.concat(buttonParams);
+
+    console.log('style guide params', params);
+
+    return params;
+  }
+
+  private getButtonParams(
+    data: AnalyzedMetaData['buttonClasses'],
+    img: string,
+  ): StyleGuideParam {
+    const params = {
+      id: StyleGuideTemplateId.button,
+      type: 'button',
+      img: '',
+      value: null,
+      classes: data,
+    };
+    return params;
+  }
+
+  private getColorParams(data: AnalyzedMetaData['colors']): StyleGuideParam[] {
+    const params = data.map(value => ({
+      id: StyleGuideTemplateId.color,
+      value,
+      type: 'color',
+    }));
+    return params;
   }
 }
