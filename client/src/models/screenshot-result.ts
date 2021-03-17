@@ -1,3 +1,4 @@
+import { StyleGuideParam } from '../style-guide/style-guide-param';
 import { PluginResult } from './plugin';
 
 export interface ScreenshotResultMetrics {
@@ -25,6 +26,7 @@ export interface MetaDataResult {
 
 export interface Result {
   results: ScreenshotResult[];
+  styleGuide: StyleGuideParam[];
 }
 
 export interface AnalyzedMetaData {

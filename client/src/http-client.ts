@@ -6,6 +6,7 @@ import { RunThrough } from './models/run-through';
 import { PageCapture } from './models/page-capture';
 import { User } from './models/user';
 import { exitWithError } from './util';
+import { StyleGuideParam } from './style-guide/style-guide-param';
 
 export class HttpClient {
   static request<T>(
@@ -192,7 +193,6 @@ export class HttpClient {
       const req = request(options, res => {
         console.log(`STATUS: ${res.statusCode}`);
         console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-
         res.on('data', chunk => console.log(`BODY: ${chunk}`));
         res.on('end', () => resolve());
       });
@@ -219,5 +219,13 @@ export class HttpClient {
       s3_object_key: pageCapture.page_capture.s3_object_key,
     };
     return this.post('api/page-capture/done-uploading', params);
+  }
+
+  public async postStyleGuide(
+    projectId: number,
+    styles: StyleGuideParam[],
+  ): Promise<void> {
+    const params = { styles };
+    return this.post(`api/styles/${projectId}`, params);
   }
 }

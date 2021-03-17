@@ -237,9 +237,10 @@ export class StyleGuideBuilder {
 
       // Take shot
       const path = join(this.pathToSaveImage, StyleGuideBuilder.fileName);
-      const screenshot = await page.screenshot({ path });
-      // const screenshot = await page.screenshot({ encoding: 'base64' });
-      templateScreenshots.push({ id: template.id, screenshot: '' });
+      // Only needed in dev
+      await page.screenshot({ path });
+      const screenshot = await page.screenshot({ encoding: 'base64' });
+      templateScreenshots.push({ id: template.id, screenshot });
     }
 
     // Join button screenshots and param data
@@ -257,7 +258,7 @@ export class StyleGuideBuilder {
     // Create params to send to API
     const params: StyleGuideParam[] = colorParams.concat(buttonParams);
 
-    console.log('style guide params', params);
+    // console.log('style guide builder : params', params);
 
     return params;
   }
@@ -269,7 +270,7 @@ export class StyleGuideBuilder {
     const params = {
       id: StyleGuideTemplateId.button,
       type: 'button',
-      img: '',
+      img,
       value: null,
       classes: data,
     };
