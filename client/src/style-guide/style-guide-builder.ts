@@ -7,14 +7,14 @@ import { AnalyzedMetaData, MetaDataResult } from '../models/screenshot-result';
 import { getElementClassCounts } from '../util';
 import { Route } from '../models/route';
 import { ProjectConfig } from '../models/project-config';
-import { StyleGuideParam, StyleGuideTemplateId } from './style-guide-param';
+import { StyleGuideParam } from './style-guide-param';
+import {
+  StyleGuideTemplateId,
+  styleGuideTemplates,
+} from './style-guide-templates';
 
 export class StyleGuideBuilder {
-  static fileName = 'style-guide.png';
-  static templates = [{ id: StyleGuideTemplateId.button, fileName: 'button' }];
-
   public metaDataWithInputElement?: MetaDataResult;
-
   private metaData: AnalyzedMetaData;
   private pathToSaveImage: string;
 
@@ -221,7 +221,7 @@ export class StyleGuideBuilder {
      *   for example if no button classes are found, skip the screenshot.
      * - Show element states like hover, focus, etc.
      */
-    for (const template of StyleGuideBuilder.templates) {
+    for (const template of styleGuideTemplates) {
       // Compile template
       const html = await StyleGuideBuilder.getStyleGuideHTML(template.fileName);
       const compiledStyleGuideTemplate = compile(html)(templateParams);
@@ -235,10 +235,10 @@ export class StyleGuideBuilder {
         document.body.innerHTML = html;
       }, compiledStyleGuideTemplate);
 
-      // Take shot
-      const path = join(this.pathToSaveImage, StyleGuideBuilder.fileName);
-      // Only needed in dev
-      await page.screenshot({ path });
+      // Take shot, only needed in dev
+      const path = join(this.pathToSaveImage, template.fileName);
+      await page.screenshot({ path: `${path}.png` });
+
       const screenshot = await page.screenshot({ encoding: 'base64' });
       templateScreenshots.push({ id: template.id, screenshot });
     }
@@ -252,11 +252,29 @@ export class StyleGuideBuilder {
       buttonImg!.screenshot,
     );
 
+    // Join typography screenshots and param data
+    const typographyImg = templateScreenshots.find(
+      ts => ts.id === StyleGuideTemplateId.typography,
+    );
+    const typographyParams = this.getTypographyParams(
+      typographyImg!.screenshot,
+    );
+
+    // Join input screenshots and param data
+    const inputImg = templateScreenshots.find(
+      ts => ts.id === StyleGuideTemplateId.input,
+    );
+    const inputParams = this.getInputParams(inputImg!.screenshot);
+
     // Colors get no screenshots
     const colorParams = this.getColorParams(this.metaData.colors);
 
     // Create params to send to API
-    const params: StyleGuideParam[] = colorParams.concat(buttonParams);
+    const params: StyleGuideParam[] = colorParams.concat(
+      buttonParams,
+      typographyParams,
+      inputParams,
+    );
 
     // console.log('style guide builder : params', params);
 
@@ -283,6 +301,26 @@ export class StyleGuideBuilder {
       value,
       type: 'color',
     }));
+    return params;
+  }
+
+  private getTypographyParams(img: string): StyleGuideParam {
+    const params = {
+      id: StyleGuideTemplateId.typography,
+      type: 'typography',
+      img,
+      value: null,
+    };
+    return params;
+  }
+
+  private getInputParams(img: string): StyleGuideParam {
+    const params = {
+      id: StyleGuideTemplateId.input,
+      type: 'input',
+      img,
+      value: null,
+    };
     return params;
   }
 }

@@ -1,8 +1,4 @@
-export enum StyleGuideTemplateId {
-  color,
-  button,
-  input,
-}
+import { StyleGuideTemplateId } from './style-guide-templates';
 
 export interface StyleGuideParam {
   id: StyleGuideTemplateId;
