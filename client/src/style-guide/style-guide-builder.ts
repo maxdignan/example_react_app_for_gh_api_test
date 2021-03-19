@@ -272,8 +272,8 @@ export class StyleGuideBuilder {
     // Create params to send to API
     const params: StyleGuideParam[] = colorParams.concat(
       buttonParams,
-      typographyParams,
-      inputParams,
+      // typographyParams,
+      // inputParams,
     );
 
     // console.log('style guide builder : params', params);

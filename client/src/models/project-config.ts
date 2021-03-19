@@ -24,10 +24,6 @@ export class ProjectConfig {
   static defaultDir = '.emtrey_tmp';
   static defaultLoginUrl = 'login';
 
-  /** Location of API. */
-  // static apiURL = 'app-qa.emtrey.io';
-  static apiURL = 'app-dev.emtrey.io';
-
   /** Local directory where screens will be stored. */
   outputDirectory: string;
 

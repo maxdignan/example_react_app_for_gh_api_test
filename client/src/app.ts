@@ -32,7 +32,7 @@ console.time('run');
 class App {
   static isDryRun = process.env.DRY_RUN ? !!+process.env.DRY_RUN : false;
   private projectConfig: ProjectConfig;
-  private httpClient = new HttpClient(ProjectConfig.apiURL);
+  private httpClient = new HttpClient();
 
   constructor(private args: Partial<AppArgs>) {}
 
@@ -93,7 +93,9 @@ class App {
     let userToken = await UserToken.readUserFromFS();
 
     if (App.isDryRun) {
-      return UserToken.fromJSON('token=dry-run-token');
+      const userToken = UserToken.fromJSON('{"token":""}');
+      this.httpClient.setToken(userToken.token);
+      return userToken;
     }
 
     if (!userToken) {
@@ -128,10 +130,8 @@ class App {
    * Gather all routes and navigate to URLs to take screenshots.
    */
   public async run() {
-    if (!App.isDryRun) {
-      // Do all user stuff first
-      await this.initializeUserToken();
-    }
+    // Do all user stuff first
+    await this.initializeUserToken();
 
     // Get parser config from user's project
     let parserConfig: ParserConfig;
@@ -256,7 +256,7 @@ class App {
    * https://app-dev.emtrey.io/login?api_session_token=uV_aeGoSOAiOxTMr01j82mjrCEolEwY9-q1eTLI2bcU9UTo0_EDcQ4wmDny4
    */
   private async authorizeUser(sessionToken: string): Promise<User> {
-    const url = `https://${ProjectConfig.apiURL}/api-login?api_session_token=${sessionToken}`;
+    const url = `https://${HttpClient.apiURL}/api-login?api_session_token=${sessionToken}`;
     openBrowserTo(url);
     return new Promise(resolve => {
       let authTries = 1;
@@ -285,7 +285,13 @@ class App {
    * Submits results to API in multiple steps.
    */
   private async submitResults(resultData: Result): Promise<unknown> {
-    console.log(`app : submit ${resultData.results.length} results`);
+    // console.log(`app : submit ${resultData.results.length} results`);
+
+    try {
+      await this.httpClient.postStyleGuide(2, resultData.styleGuide);
+    } catch (err) {
+      console.log('app : error submitting style guide :', err);
+    }
 
     if (App.isDryRun) {
       console.log('\n\n***********************');
@@ -294,7 +300,7 @@ class App {
       for (const result of resultData.results) {
         console.log('\napp : result :', result, '\n');
       }
-      console.log('\ncstyle guide', resultData.styleGuide);
+      // console.log('\ncstyle guide', resultData.styleGuide);
       return;
     }
 
