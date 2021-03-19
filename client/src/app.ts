@@ -21,6 +21,7 @@ import { GitInfo } from './models/git-info';
 import { RunThrough } from './models/run-through';
 import { PageCapture } from './models/page-capture';
 import { PluginResult } from './models/plugin';
+import { Project, CreateProjectAPIParams } from './models/project';
 import {
   PageScreenShotPlugin,
   PageScreenshotPluginResult,
@@ -80,8 +81,8 @@ class App {
       framework,
       extension,
     };
-    console.log('app : parser framework :', Framework[framework]);
-    console.log('app : parser extension :', extension);
+    // console.log('app : parser framework :', Framework[framework]);
+    // console.log('app : parser extension :', extension);
     return parserConfig;
   }
 
@@ -92,33 +93,49 @@ class App {
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS();
 
-    if (App.isDryRun) {
-      const userToken = UserToken.fromJSON('{"token":""}');
-      this.httpClient.setToken(userToken.token);
-      return userToken;
-    }
+    // if (App.isDryRun) {
+    //   const userToken = UserToken.fromJSON('{"token":""}');
+    //   this.httpClient.setToken(userToken.token);
+    //   return userToken;
+    // }
 
     if (!userToken) {
       console.log('auth : no user token, creating one...');
       // User token is not cached on fs, create one...
       sessionToken = await this.httpClient.generateAndSetSessionToken();
-      this.httpClient.setToken(sessionToken);
       console.log('auth : got session token :', sessionToken);
+
+      // Cache token for API interaction
+      this.httpClient.setToken(sessionToken);
 
       // Then let user login manually via web app
       const user = await this.authorizeUser(sessionToken);
       console.log('auth : authorized user :', user);
 
+      // Create users' first organization
+      const organization = await this.httpClient.createOrganization({
+        name: `${user.first_name} Organization`,
+      });
+
+      // Create users' first project
+      const project = await this.httpClient.createProject({
+        name: this.args.app || 'My First App',
+        github_url: null,
+        org_id: organization.id,
+      });
+
       // Save user token for future runs
-      await UserToken.saveToFS(user, sessionToken);
+      await UserToken.saveToFS(user, sessionToken, project.id, organization.id);
       console.log('auth : user token saved');
     } else {
       // Use token from user file
       console.log('auth : got cached user :', userToken);
-      const { token } = userToken;
+      const { token } = userToken!;
       if (!token) {
         exitWithError('Invalid user token!');
       }
+
+      // Cache token for API interaction
       sessionToken = token;
       this.httpClient.setToken(sessionToken);
     }
@@ -131,7 +148,11 @@ class App {
    */
   public async run() {
     // Do all user stuff first
-    await this.initializeUserToken();
+    try {
+      await this.initializeUserToken();
+    } catch (err) {
+      exitWithError(`Failed to initialize user ${err}`);
+    }
 
     // Get parser config from user's project
     let parserConfig: ParserConfig;

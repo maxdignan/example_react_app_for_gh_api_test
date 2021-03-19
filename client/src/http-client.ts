@@ -1,12 +1,13 @@
 import { readFileSync } from 'fs';
 import { request, RequestOptions } from 'https';
 
-import { Project } from './models/project';
+import { Project, CreateProjectAPIParams } from './models/project';
 import { RunThrough } from './models/run-through';
 import { PageCapture } from './models/page-capture';
 import { User } from './models/user';
 import { exitWithError } from './util';
 import { StyleGuideParam } from './style-guide/style-guide-param';
+import { Organization } from './models/organization';
 
 export class HttpClient {
   /** Location of API. */
@@ -138,16 +139,23 @@ export class HttpClient {
 
   /**
    * @example:
-   * curl -H "api_session_token: Qz4CQhbx52rEYCBlDU1mAnPC9R8fTvXM7xxSQV4uD-Ua3rhEcl9dHNqHea6J" \
+   * curl -H "api_session_token: 7-pPlR953cKsolUz1vzkIzpIsfQ8q_ZQWPqlhGwpLQnRutcm6NP4nVf5eXHh" \
+        -d "name=my_organization" \
+        -X POST https://app-dev.emtrey.io/api/org
+   */
+  public async createOrganization(params: {
+    name: string;
+  }): Promise<Organization> {
+    return this.post<Organization>('/api/org', params);
+  }
+
+  /**
+   * @example:
+   * curl -H "api_session_token: guvyxLiw0O1GeCpvk8FwRq92DEAZhQSmEso3z68-zykC2MgvRZK-BizBGsE9" \
       -d "name=my_first_project&github_url=foo&org_id=1" \
       -X POST https://app-dev.emtrey.io/api/project
    */
-  public async createProject(): Promise<Project> {
-    const params = {
-      name: 'foo',
-      github_url: null,
-      org_id: null,
-    };
+  public async createProject(params: CreateProjectAPIParams): Promise<Project> {
     return this.post<Project>('/api/project', params);
   }
 
