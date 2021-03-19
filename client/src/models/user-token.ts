@@ -21,7 +21,7 @@ export class UserToken implements UserTokenInterface {
   /**
    * Instantiate user token from string.
    */
-  private static fromJSON(json: string): UserToken {
+  public static fromJSON(json: string): UserToken {
     let token: UserTokenInterface = {} as UserTokenInterface;
     try {
       token = JSON.parse(json);

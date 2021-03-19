@@ -6,8 +6,13 @@ import { RunThrough } from './models/run-through';
 import { PageCapture } from './models/page-capture';
 import { User } from './models/user';
 import { exitWithError } from './util';
+import { StyleGuideParam } from './style-guide/style-guide-param';
 
 export class HttpClient {
+  /** Location of API. */
+  // static apiURL = 'app-qa.emtrey.io';
+  static apiURL = 'app-dev.emtrey.io';
+
   static request<T>(
     method: 'GET' | 'POST' = 'GET',
     hostname: string,
@@ -22,7 +27,7 @@ export class HttpClient {
     const headers = token ? { api_session_token: token } : null;
 
     if (!token) {
-      console.warn('http : no token supplied');
+      console.log('\n\nhttp : no token supplied\n\n');
     }
 
     const options = {
@@ -77,25 +82,33 @@ export class HttpClient {
 
   public token: string;
 
-  constructor(private apiURL: string) {}
-
   public setToken(token: string) {
-    this.token = 'Qz4CQhbx52rEYCBlDU1mAnPC9R8fTvXM7xxSQV4uD-Ua3rhEcl9dHNqHea6J';
+    // Hardcoded to test style guide api
+    this.token = 'guvyxLiw0O1GeCpvk8FwRq92DEAZhQSmEso3z68-zykC2MgvRZK-BizBGsE9';
+    // this.token = token;
   }
 
   public get<T>(url: string): Promise<T> {
-    return HttpClient.request('GET', this.apiURL, url, this.token);
+    return HttpClient.request('GET', HttpClient.apiURL, url, this.token);
   }
 
   public post<T>(url: string, params: { [key: string]: any }): Promise<T> {
-    console.log('http : post :', url, this.token, params);
-    return HttpClient.request('POST', this.apiURL, url, this.token, params);
+    console.log('http : post :', url, this.token);
+    return HttpClient.request(
+      'POST',
+      HttpClient.apiURL,
+      url,
+      this.token,
+      params,
+    );
   }
 
   /**
    * Hits API to get a session token, registers it on class
    * @example:
    * curl https://app-dev.emtrey.io/api/user/generate-raw-api-session
+   *
+   * https://app-dev.emtrey.io/api-login?api_session_token=TOKEN
    */
   public async generateAndSetSessionToken(): Promise<string> {
     const path = '/api/user/generate-raw-api-session';
@@ -103,7 +116,7 @@ export class HttpClient {
     try {
       const res = await HttpClient.request<{ token: string }>(
         'GET',
-        this.apiURL,
+        HttpClient.apiURL,
         path,
       );
       // console.log('http client : generated token :', res);
@@ -116,7 +129,7 @@ export class HttpClient {
 
   /**
    * @example:
-   * curl -H "api_session_token Qz4CQhbx52rEYCBlDU1mAnPC9R8fTvXM7xxSQV4uD-Ua3rhEcl9dHNqHea6J" \
+   * curl -H "api_session_token guvyxLiw0O1GeCpvk8FwRq92DEAZhQSmEso3z68-zykC2MgvRZK-BizBGsE9" \
       https://app-dev.emtrey.io/api/user
    */
   public async getUser(): Promise<User | null> {
@@ -192,7 +205,6 @@ export class HttpClient {
       const req = request(options, res => {
         console.log(`STATUS: ${res.statusCode}`);
         console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-
         res.on('data', chunk => console.log(`BODY: ${chunk}`));
         res.on('end', () => resolve());
       });
@@ -219,5 +231,20 @@ export class HttpClient {
       s3_object_key: pageCapture.page_capture.s3_object_key,
     };
     return this.post('api/page-capture/done-uploading', params);
+  }
+
+  /**
+   * @example:
+   * curl -H "api_session_token: guvyxLiw0O1GeCpvk8FwRq92DEAZhQSmEso3z68-zykC2MgvRZK-BizBGsE9" \
+      --data "@style-guide-payload.json" \
+      --header "Content-Type: application/json" \
+      -X POST https://app-dev.emtrey.io/api/styles/2
+   */
+  public async postStyleGuide(
+    projectId: number,
+    styles: StyleGuideParam[],
+  ): Promise<void> {
+    const params = { styles };
+    return this.post(`api/styles/${projectId}`, params);
   }
 }

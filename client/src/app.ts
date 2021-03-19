@@ -32,7 +32,7 @@ console.time('run');
 class App {
   static isDryRun = process.env.DRY_RUN ? !!+process.env.DRY_RUN : false;
   private projectConfig: ProjectConfig;
-  private httpClient = new HttpClient(ProjectConfig.apiURL);
+  private httpClient = new HttpClient();
 
   constructor(private args: Partial<AppArgs>) {}
 
@@ -88,9 +88,15 @@ class App {
   /**
    * Get user from cache or create new.
    */
-  private async initializeUserToken() {
+  private async initializeUserToken(): Promise<UserToken> {
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS();
+
+    if (App.isDryRun) {
+      const userToken = UserToken.fromJSON('{"token":""}');
+      this.httpClient.setToken(userToken.token);
+      return userToken;
+    }
 
     if (!userToken) {
       console.log('auth : no user token, creating one...');
@@ -117,17 +123,15 @@ class App {
       this.httpClient.setToken(sessionToken);
     }
 
-    return userToken;
+    return userToken!;
   }
 
   /**
    * Gather all routes and navigate to URLs to take screenshots.
    */
   public async run() {
-    if (!App.isDryRun) {
-      // Do all user stuff first
-      await this.initializeUserToken();
-    }
+    // Do all user stuff first
+    await this.initializeUserToken();
 
     // Get parser config from user's project
     let parserConfig: ParserConfig;
@@ -252,7 +256,7 @@ class App {
    * https://app-dev.emtrey.io/login?api_session_token=uV_aeGoSOAiOxTMr01j82mjrCEolEwY9-q1eTLI2bcU9UTo0_EDcQ4wmDny4
    */
   private async authorizeUser(sessionToken: string): Promise<User> {
-    const url = `https://${ProjectConfig.apiURL}/api-login?api_session_token=${sessionToken}`;
+    const url = `https://${HttpClient.apiURL}/api-login?api_session_token=${sessionToken}`;
     openBrowserTo(url);
     return new Promise(resolve => {
       let authTries = 1;
@@ -280,29 +284,38 @@ class App {
   /**
    * Submits results to API in multiple steps.
    */
-  private async submitResults(data: Result): Promise<unknown> {
-    console.log(`app : submit ${data.results.length} results`);
+  private async submitResults(resultData: Result): Promise<unknown> {
+    // console.log(`app : submit ${resultData.results.length} results`);
+
+    try {
+      await this.httpClient.postStyleGuide(2, resultData.styleGuide);
+    } catch (err) {
+      console.log('app : error submitting style guide :', err);
+    }
 
     if (App.isDryRun) {
       console.log('\n\n***********************');
       console.log('app : dry run detected');
       console.log('***********************');
-      for (const result of data.results) {
+      for (const result of resultData.results) {
         console.log('\napp : result :', result, '\n');
       }
+      // console.log('\ncstyle guide', resultData.styleGuide);
       return;
     }
+
+    /** @todo: Where do we get this? */
+    const projectId = 36;
 
     // Start with posting run through result to project
     let runThroughResult: RunThrough;
     try {
       const [branch, commit] = await this.getGitInfo();
-      // @todo: Where do we get project id?
       // @todo: Remove hard code branch of `master`
       const runThroughParams = {
         branch: 'master',
         commit,
-        project_id: 36,
+        project_id: projectId,
       };
       runThroughResult = await this.httpClient.postRunThrough(runThroughParams);
       console.log('app : results : submitted run through :', runThroughResult);
@@ -313,7 +326,7 @@ class App {
     // Once a run through identifier is obtained
     // loop through results and post each to API
 
-    for (const result of data.results) {
+    for (const result of resultData.results) {
       // console.log('\n\n', 'app : result :', result, '\n\n');
 
       const { data } = result.plugins.find(
@@ -352,6 +365,12 @@ class App {
         );
       } catch (err) {
         exitWithError(err);
+      }
+
+      try {
+        await this.httpClient.postStyleGuide(projectId, resultData.styleGuide);
+      } catch (err) {
+        console.log('app : error submitting style guide :', err);
       }
     }
 

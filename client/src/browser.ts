@@ -9,13 +9,14 @@ import {
 } from './models/screenshot-result';
 import { exitWithError, allPropsForElement } from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
-import { StlyeGuideBuilder } from './style-guide/style-guide-builder';
+import { StyleGuideBuilder } from './style-guide/style-guide-builder';
 import * as fromPlugins from './plugins';
+import { StyleGuideParam } from './style-guide/style-guide-param';
 
 export class Browser {
   static viewports = [
     { w: 1400, h: 1200, mobile: false },
-    { w: 375, h: 812, mobile: true },
+    // { w: 375, h: 812, mobile: true },
   ];
 
   // Can be thought of as dpr of screenshot
@@ -24,7 +25,7 @@ export class Browser {
   static enabledPlugins: Plugin<unknown>[] = [
     new fromPlugins.PageScreenShotPlugin(),
     // new fromPlugins.ComponentScreenShotPlugin(),
-    new fromPlugins.PageTitlePlugin(),
+    // new fromPlugins.PageTitlePlugin(),
     // new fromPlugins.MetricsPlugin(),
   ];
 
@@ -295,23 +296,24 @@ export class Browser {
       await page.close();
     }
 
+    let styleGuide: StyleGuideParam[] = [];
+
     // Build style guide after all route visits.
     try {
-      const sgb = await new StlyeGuideBuilder({ metaData, path });
+      const sgb = new StyleGuideBuilder({ metaData, path });
       const page = await browser.newPage();
       const url = sgb.getURLToVisit(routes, serverUrl, config);
       await page.goto(url, { waitUntil: ['load'] });
-      await sgb.buildStyleGuide(page);
+      styleGuide = await sgb.buildStyleGuide(page);
       await page.close();
     } catch (err) {
       console.error(err);
     }
 
     await browser.close();
-    console.log('browser : closed');
+    // console.log('browser : closed');
 
-    // Might not need to return meta data anymore.
-    return { results };
+    return { results, styleGuide };
   }
 
   /**
@@ -351,7 +353,7 @@ export class Browser {
 
     try {
       buttonClasses = await allPropsForElement(params.page, 'button');
-      colors = await StlyeGuideBuilder.getAllColorsInStyleSheets(params.page);
+      colors = await StyleGuideBuilder.getAllColorsInStyleSheets(params.page);
     } catch (err) {
       console.log('collect meta data : error :', err);
     }
