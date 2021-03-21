@@ -111,7 +111,7 @@ export class HttpClient {
    *
    * https://app-dev.emtrey.io/api-login?api_session_token=TOKEN
    */
-  public async generateAndSetSessionToken(): Promise<string> {
+  public async generateSessionToken(): Promise<string> {
     const path = '/api/user/generate-raw-api-session';
     let token: string;
     try {

@@ -61,7 +61,7 @@ export const xhrGet = (url: string): Promise<boolean> => {
  * Logs error and quits node process.
  */
 export const exitWithError = (err: string) => {
-  console.error('app : fatal error :', err);
+  console.log(err);
   process.exit(0);
 };
 

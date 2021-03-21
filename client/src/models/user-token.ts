@@ -6,6 +6,7 @@ import { User } from './user';
 export interface UserTokenInterface {
   token: string;
   email?: string;
+  first_name: string;
   organizationId: number;
   projectId: number;
 }
@@ -13,7 +14,7 @@ export interface UserTokenInterface {
 export class UserToken implements UserTokenInterface {
   readonly token: string;
   readonly email?: string;
-  readonly first_name?: string;
+  readonly first_name: string;
   readonly organizationId: number;
   readonly projectId: number;
 
@@ -50,6 +51,7 @@ export class UserToken implements UserTokenInterface {
       projectId,
       organizationId,
     };
+    console.log('user token : saving :', token);
     try {
       await fs.promises.writeFile(
         UserToken.tokenFile,
@@ -93,5 +95,7 @@ export class UserToken implements UserTokenInterface {
     this.token = data.token;
     this.email = data.email;
     this.organizationId = data.organizationId;
+    this.projectId = data.projectId;
+    this.first_name = data.first_name;
   }
 }
