@@ -21,7 +21,6 @@ import { GitInfo } from './models/git-info';
 import { RunThrough } from './models/run-through';
 import { PageCapture } from './models/page-capture';
 import { PluginResult } from './models/plugin';
-import { Project, CreateProjectAPIParams } from './models/project';
 import {
   PageScreenShotPlugin,
   PageScreenshotPluginResult,
@@ -179,8 +178,8 @@ class App {
    * Gather all routes and navigate to URLs to take screenshots.
    */
   public async run() {
-    let token: UserToken;
     // Do all user stuff first
+    let token: UserToken;
     try {
       token = await this.initializeUserToken();
     } catch (err) {
