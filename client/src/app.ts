@@ -9,7 +9,7 @@ import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
 import { AppArgs } from './models/args';
 import { Result } from './models/screenshot-result';
-import { Framework, ParserConfig } from './models/parser';
+import { ParserConfig } from './models/parser';
 import { Browser } from './browser';
 import { URLParser } from './url-parser';
 import { FrameworkParser } from './framework-parser';
@@ -80,8 +80,8 @@ class App {
       framework,
       extension,
     };
-    console.log('app : parser framework :', Framework[framework]);
-    console.log('app : parser extension :', extension);
+    // console.log('app : parser framework :', Framework[framework]);
+    // console.log('app : parser extension :', extension);
     return parserConfig;
   }
 
@@ -89,36 +89,84 @@ class App {
    * Get user from cache or create new.
    */
   private async initializeUserToken(): Promise<UserToken> {
+    // UserToken.deleteUserFromFS();
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS();
-
-    if (App.isDryRun) {
-      const userToken = UserToken.fromJSON('{"token":""}');
-      this.httpClient.setToken(userToken.token);
-      return userToken;
-    }
 
     if (!userToken) {
       console.log('auth : no user token, creating one...');
       // User token is not cached on fs, create one...
-      sessionToken = await this.httpClient.generateAndSetSessionToken();
-      this.httpClient.setToken(sessionToken);
+      sessionToken = await this.httpClient.generateSessionToken();
       console.log('auth : got session token :', sessionToken);
+
+      // Cache token for API interaction
+      this.httpClient.setToken(sessionToken);
 
       // Then let user login manually via web app
       const user = await this.authorizeUser(sessionToken);
       console.log('auth : authorized user :', user);
 
+      let organizationId: number;
+      let projectId: number;
+
+      const hasOrganization = user.orgs.length > 0;
+      const hasProjects = user.projects.length > 0;
+
+      // Need to create org and projects before we continue
+      if (!hasOrganization && !hasProjects) {
+        console.log('auth : no organization, no projects');
+        // Create users' first organization
+        const organization = await this.httpClient.createOrganization({
+          name: `${user.first_name} Organization`,
+        });
+        organizationId = organization.id;
+        // Create users' first project
+        const project = await this.httpClient.createProject({
+          name: this.args.app || 'my_first_project',
+          github_url: null,
+          org_id: organizationId,
+        });
+        projectId = project.id;
+      } else if (hasOrganization && !hasProjects) {
+        console.log('auth : has organization, no projects');
+        /** @todo */
+      } else if (
+        (!hasOrganization && hasProjects) ||
+        (hasOrganization && hasProjects)
+      ) {
+        /** @todo: Prompt user to select project? */
+        // Take the org from the project.
+        const project = user.projects.find(p => p.name === this.args.app);
+        if (!project) {
+          /** @todo: Project doesn't exist, create it? */
+          exitWithError(`Could not find project ${this.args.app}`);
+        }
+        // const firstProject = user.projects[0];
+        console.log('auth : using project :', project);
+        organizationId = project!.org_id;
+        projectId = project!.id;
+      } else {
+        exitWithError('Could not find organization for user');
+      }
+
+      console.log(
+        'auth : organization and project :',
+        organizationId!,
+        projectId!,
+      );
+
       // Save user token for future runs
-      await UserToken.saveToFS(user, sessionToken);
+      await UserToken.saveToFS(user, sessionToken, projectId!, organizationId!);
       console.log('auth : user token saved');
     } else {
       // Use token from user file
       console.log('auth : got cached user :', userToken);
-      const { token } = userToken;
-      if (!token) {
-        exitWithError('Invalid user token!');
+      const { token, projectId, organizationId } = userToken!;
+      if (!token || !projectId || !organizationId) {
+        exitWithError('Invalid user token');
       }
+
+      // Cache token for API interaction
       sessionToken = token;
       this.httpClient.setToken(sessionToken);
     }
@@ -131,7 +179,12 @@ class App {
    */
   public async run() {
     // Do all user stuff first
-    await this.initializeUserToken();
+    let token: UserToken;
+    try {
+      token = await this.initializeUserToken();
+    } catch (err) {
+      exitWithError(`Failed to initialize user ${err}`);
+    }
 
     // Get parser config from user's project
     let parserConfig: ParserConfig;
@@ -164,7 +217,7 @@ class App {
     );
 
     // Send data to API
-    await this.submitResults(results);
+    await this.submitResults(results, token!);
 
     // Cleanup local fs
     try {
@@ -284,7 +337,10 @@ class App {
   /**
    * Submits results to API in multiple steps.
    */
-  private async submitResults(resultData: Result): Promise<unknown> {
+  private async submitResults(
+    resultData: Result,
+    token: UserToken,
+  ): Promise<unknown> {
     // console.log(`app : submit ${resultData.results.length} results`);
 
     try {
@@ -304,18 +360,14 @@ class App {
       return;
     }
 
-    /** @todo: Where do we get this? */
-    const projectId = 36;
-
     // Start with posting run through result to project
     let runThroughResult: RunThrough;
     try {
       const [branch, commit] = await this.getGitInfo();
-      // @todo: Remove hard code branch of `master`
       const runThroughParams = {
         branch: 'master',
         commit,
-        project_id: projectId,
+        project_id: token.projectId,
       };
       runThroughResult = await this.httpClient.postRunThrough(runThroughParams);
       console.log('app : results : submitted run through :', runThroughResult);
@@ -336,8 +388,8 @@ class App {
       const pageCaptureParams = {
         page_route: result.url,
         page_title: data, // Required by have content by API
-        // run_through_id: runThroughResult!.id,
-        run_through_id: 48,
+        run_through_id: runThroughResult!.id,
+        // run_through_id: 48,
       };
 
       // console.log('app : results : page capture params :', pageCaptureParams);
@@ -368,7 +420,10 @@ class App {
       }
 
       try {
-        await this.httpClient.postStyleGuide(projectId, resultData.styleGuide);
+        await this.httpClient.postStyleGuide(
+          token.projectId,
+          resultData.styleGuide,
+        );
       } catch (err) {
         console.log('app : error submitting style guide :', err);
       }

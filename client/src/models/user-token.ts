@@ -1,19 +1,22 @@
 import { tmpdir } from 'os';
-import { exitWithError } from '../util';
 import * as fs from 'fs';
+import { exitWithError } from '../util';
 import { User } from './user';
 
 export interface UserTokenInterface {
   token: string;
   email?: string;
-  organizationId?: number;
+  first_name: string;
+  organizationId: number;
+  projectId: number;
 }
 
 export class UserToken implements UserTokenInterface {
   readonly token: string;
   readonly email?: string;
-  readonly first_name?: string;
-  readonly organizationId?: number;
+  readonly first_name: string;
+  readonly organizationId: number;
+  readonly projectId: number;
 
   // Temp location of cached user token on fs
   static tokenFile = `${tmpdir()}/emtrey`;
@@ -35,12 +38,20 @@ export class UserToken implements UserTokenInterface {
   /**
    * Write user info to file system.
    */
-  static async saveToFS(user: User, sessionToken: string) {
-    const token = {
+  static async saveToFS(
+    user: User,
+    sessionToken: string,
+    projectId: number,
+    organizationId: number,
+  ) {
+    const token: UserTokenInterface & Pick<User, 'first_name'> = {
       email: user.email,
       first_name: user.first_name || 'Anon',
       token: sessionToken,
+      projectId,
+      organizationId,
     };
+    console.log('user token : saving :', token);
     try {
       await fs.promises.writeFile(
         UserToken.tokenFile,
@@ -84,5 +95,7 @@ export class UserToken implements UserTokenInterface {
     this.token = data.token;
     this.email = data.email;
     this.organizationId = data.organizationId;
+    this.projectId = data.projectId;
+    this.first_name = data.first_name;
   }
 }
