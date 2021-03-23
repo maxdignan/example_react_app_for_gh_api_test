@@ -330,7 +330,7 @@ class App {
           exitWithError('Too many authorization attempts');
         }
         authTries += 1;
-      }, 6000);
+      }, 4000);
     });
   }
 
@@ -340,9 +340,7 @@ class App {
   private async submitResults(
     resultData: Result,
     token: UserToken,
-  ): Promise<unknown> {
-    // console.log(`app : submit ${resultData.results.length} results`);
-
+  ): Promise<void> {
     try {
       await this.httpClient.postStyleGuide(2, resultData.styleGuide);
     } catch (err) {
@@ -365,7 +363,9 @@ class App {
     try {
       const [branch, commit] = await this.getGitInfo();
       const runThroughParams = {
-        branch: 'master',
+        // API would error when branch not set to master
+        // branch: 'master',
+        branch,
         commit,
         project_id: token.projectId,
       };
@@ -429,7 +429,7 @@ class App {
       }
     }
 
-    return null;
+    return;
   }
 }
 
