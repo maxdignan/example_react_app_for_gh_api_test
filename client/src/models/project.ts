@@ -14,12 +14,12 @@ export interface Project {
   org_id: number;
   name: string;
   base_branch_name: string;
+  archive_flag: boolean;
   screen_resolutions: {
     Desktop: string;
     Mobile: string;
     Tablet: string;
-  };
-  archive_flag: boolean;
+  }[];
 }
 
 export interface CreateProjectAPIParams {

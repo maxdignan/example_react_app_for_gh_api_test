@@ -251,7 +251,7 @@ export class HttpClient {
   public async postStyleGuide(
     projectId: number,
     styles: StyleGuideParam[],
-  ): Promise<void> {
+  ): Promise<Project> {
     const params = { styles };
     return this.post(`api/styles/${projectId}`, params);
   }
