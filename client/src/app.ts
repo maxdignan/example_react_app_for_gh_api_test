@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readFile } from 'fs';
 import { exec } from 'child_process';
 import { join } from 'path';
 import * as rimraf from 'rimraf';
 
 import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
-import { AppArgs } from './models/args';
+import { AppArgs, getArgFor } from './models/args';
 import { Result } from './models/screenshot-result';
 import { ParserConfig } from './models/parser';
 import { Browser } from './browser';
@@ -34,7 +34,19 @@ class App {
   private projectConfig: ProjectConfig;
   private httpClient = new HttpClient();
 
-  constructor(private args: Partial<AppArgs>) {}
+  constructor(private args: Partial<AppArgs>) {
+    this.validateArgs(args);
+    console.log('app : args :', args);
+  }
+
+  private validateArgs(args: Partial<AppArgs>) {
+    const url = getArgFor(args, 'url');
+    const port = getArgFor(args, 'port');
+    if (!url && !port) {
+      const error = `Invalid arguments supplied. You must define at least a url (--url=localhost:4200) or port (--port=4200).`;
+      exitWithError(error);
+    }
+  }
 
   /**
    * Look for an emtrey project config file in the source directory.
@@ -71,7 +83,7 @@ class App {
    * Sniff project framework, file extension, etc.
    */
   private async getParserConfig(): Promise<ParserConfig> {
-    const frameworkParser = new FrameworkParser(this.args.dir!);
+    const frameworkParser = new FrameworkParser(this.getAppDirectory());
     const [framework, extension] = await Promise.all([
       frameworkParser.getFramework(),
       frameworkParser.getExtension(),
@@ -111,6 +123,7 @@ class App {
 
       const hasOrganization = user.orgs.length > 0;
       const hasProjects = user.projects.length > 0;
+      const appName = await this.getAppName();
 
       // Need to create org and projects before we continue
       if (!hasOrganization && !hasProjects) {
@@ -122,7 +135,7 @@ class App {
         organizationId = organization.id;
         // Create users' first project
         const project = await this.httpClient.createProject({
-          name: this.args.app || 'my_first_project',
+          name: appName,
           github_url: null,
           org_id: organizationId,
         });
@@ -136,10 +149,10 @@ class App {
       ) {
         /** @todo: Prompt user to select project? */
         // Take the org from the project.
-        const project = user.projects.find(p => p.name === this.args.app);
+        const project = user.projects.find(p => p.name === appName);
         if (!project) {
           /** @todo: Project doesn't exist, create it? */
-          exitWithError(`Could not find project ${this.args.app}`);
+          exitWithError(`Could not find project ${appName}`);
         }
         // const firstProject = user.projects[0];
         console.log('auth : using project :', project);
@@ -175,6 +188,36 @@ class App {
   }
 
   /**
+   * Get app directory from arguments, or fallback to current working directory.
+   */
+  private getAppDirectory(): string {
+    const arg = getArgFor(this.args, 'dir');
+    return arg ? arg : process.cwd();
+  }
+
+  private async getAppName(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const arg = getArgFor(this.args, 'app');
+      if (arg) {
+        resolve(arg);
+      }
+      const dir = this.getAppDirectory();
+      readFile(`${dir}/package.json`, { encoding: 'utf-8' }, (err, json) => {
+        if (err) {
+          reject(err);
+        }
+        let appName: string;
+        try {
+          appName = JSON.parse(json).name;
+        } catch (err) {
+          reject(err);
+        }
+        resolve(appName! || 'my_emtrey_project');
+      });
+    });
+  }
+
+  /**
    * Gather all routes and navigate to URLs to take screenshots.
    */
   public async run() {
@@ -195,23 +238,27 @@ class App {
       exitWithError(`Could not locate parser config, error: ${err}`);
     }
 
+    const appDir = this.getAppDirectory();
+
     // Get emtrey config from user's project
-    const projectConfig = await this.readProjectConfig(this.args.dir!);
+    const projectConfig = await this.readProjectConfig(appDir);
     this.setProjectConfig(projectConfig);
 
     // Sniff out all project routes based on config
-    const routes = await new URLParser(parserConfig!).getRoutes(this.args.dir!);
+    const routes = await new URLParser(parserConfig!).getRoutes(appDir);
+
+    const appURL = Browser.getAppURL(this.args);
 
     // Check user's project is running locally
-    await this.confirmProjectIsRunning(this.args.url!, routes[0]);
+    await this.confirmProjectIsRunning(appURL, routes[0]);
 
     // Prepare fs if project has config
-    const path = await this.prepareScreenshotDirectory(this.args.dir!);
+    const path = await this.prepareScreenshotDirectory(appDir);
 
     // Browse to routes and execute plugins
     const results = await new Browser().visitRoutes(
       routes,
-      this.args.url!,
+      appURL,
       path,
       projectConfig,
     );
@@ -287,7 +334,7 @@ class App {
       exec(
         'git rev-parse --abbrev-ref HEAD && git rev-parse HEAD',
         {
-          cwd: this.args.dir,
+          cwd: this.getAppDirectory(),
         },
         (err: Error, stdout: string, stderr: string) => {
           console.timeEnd('git info');

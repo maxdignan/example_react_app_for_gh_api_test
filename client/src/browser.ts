@@ -11,6 +11,7 @@ import { exitWithError, allPropsForElement } from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
 import { StyleGuideBuilder } from './style-guide/style-guide-builder';
 import { StyleGuideParam } from './style-guide/style-guide-param';
+import { AppArgs, getArgFor } from './models/args';
 import * as fromPlugins from './plugins';
 
 export class Browser {
@@ -32,6 +33,18 @@ export class Browser {
     new fromPlugins.PageTitlePlugin(),
     // new fromPlugins.MetricsPlugin(),
   ];
+
+  /**
+   * Gets the application base URL which will be visiting for each route.
+   */
+  static getAppURL(args: Partial<AppArgs>): string {
+    const port = getArgFor(args, 'port');
+    if (port) {
+      return `http://localhost:${port}`;
+    }
+    const url = getArgFor(args, 'url');
+    return url!;
+  }
 
   private authorized = false;
   private launchConfig: LaunchOptions = {
