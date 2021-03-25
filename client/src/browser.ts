@@ -16,7 +16,7 @@ import { StyleGuideParam } from './style-guide/style-guide-param';
 export class Browser {
   static viewports = [
     { w: 1400, h: 1200, mobile: false },
-    // { w: 375, h: 812, mobile: true },
+    { w: 375, h: 812, mobile: true },
   ];
 
   // Can be thought of as dpr of screenshot
@@ -25,7 +25,7 @@ export class Browser {
   static enabledPlugins: Plugin<unknown>[] = [
     new fromPlugins.PageScreenShotPlugin(),
     // new fromPlugins.ComponentScreenShotPlugin(),
-    // new fromPlugins.PageTitlePlugin(),
+    new fromPlugins.PageTitlePlugin(),
     // new fromPlugins.MetricsPlugin(),
   ];
 
