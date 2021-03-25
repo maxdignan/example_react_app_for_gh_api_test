@@ -209,8 +209,6 @@ export class Browser {
       screenShotResults.push({ url, plugins });
     }
 
-    // const result: ScreenshotResult = { url, plugins };
-
     return screenShotResults;
   }
 
