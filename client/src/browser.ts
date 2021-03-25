@@ -10,13 +10,17 @@ import {
 import { exitWithError, allPropsForElement } from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
 import { StyleGuideBuilder } from './style-guide/style-guide-builder';
-import * as fromPlugins from './plugins';
 import { StyleGuideParam } from './style-guide/style-guide-param';
+import * as fromPlugins from './plugins';
 
 export class Browser {
   static viewports = [
-    { w: 1400, h: 1200, mobile: false },
-    // { w: 375, h: 812, mobile: true },
+    // Desktop
+    { w: 1400, h: 900, mobile: false },
+    // Tablet iPad portrait
+    { w: 768, h: 1024, mobile: true },
+    // iPhone 11
+    { w: 375, h: 812, mobile: true },
   ];
 
   // Can be thought of as dpr of screenshot
