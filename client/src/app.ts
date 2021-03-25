@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readFile } from 'fs';
 import { exec } from 'child_process';
 import { join } from 'path';
 import * as rimraf from 'rimraf';
@@ -123,6 +123,7 @@ class App {
 
       const hasOrganization = user.orgs.length > 0;
       const hasProjects = user.projects.length > 0;
+      const appName = await this.getAppName();
 
       // Need to create org and projects before we continue
       if (!hasOrganization && !hasProjects) {
@@ -134,7 +135,7 @@ class App {
         organizationId = organization.id;
         // Create users' first project
         const project = await this.httpClient.createProject({
-          name: this.args.app || 'my_first_project',
+          name: appName,
           github_url: null,
           org_id: organizationId,
         });
@@ -148,10 +149,10 @@ class App {
       ) {
         /** @todo: Prompt user to select project? */
         // Take the org from the project.
-        const project = user.projects.find(p => p.name === this.args.app);
+        const project = user.projects.find(p => p.name === appName);
         if (!project) {
           /** @todo: Project doesn't exist, create it? */
-          exitWithError(`Could not find project ${this.args.app}`);
+          exitWithError(`Could not find project ${appName}`);
         }
         // const firstProject = user.projects[0];
         console.log('auth : using project :', project);
@@ -191,10 +192,29 @@ class App {
    */
   private getAppDirectory(): string {
     const arg = getArgFor(this.args, 'dir');
-    if (arg) {
-      return arg;
-    }
-    return process.cwd();
+    return arg ? arg : process.cwd();
+  }
+
+  private async getAppName(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const arg = getArgFor(this.args, 'app');
+      if (arg) {
+        resolve(arg);
+      }
+      const dir = this.getAppDirectory();
+      readFile(`${dir}/package.json`, { encoding: 'utf-8' }, (err, json) => {
+        if (err) {
+          reject(err);
+        }
+        let appName: string;
+        try {
+          appName = JSON.parse(json).name;
+        } catch (err) {
+          reject(err);
+        }
+        resolve(appName! || 'my_emtrey_project');
+      });
+    });
   }
 
   /**

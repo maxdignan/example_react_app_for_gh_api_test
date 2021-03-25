@@ -6,6 +6,7 @@ interface AppArgsInterface {
   dir: string;
   d: string;
   app: string;
+  a: string;
 }
 
 export type AppArgs = Readonly<AppArgsInterface>;
