@@ -20,7 +20,7 @@ export class Browser {
     // Tablet iPad portrait
     { w: 768, h: 1024, mobile: true },
     // iPhone 11
-    { w: 375, h: 812, mobile: true },
+    { w: 1400, h: 1200, mobile: false },
   ];
 
   // Can be thought of as dpr of screenshot
@@ -29,7 +29,7 @@ export class Browser {
   static enabledPlugins: Plugin<unknown>[] = [
     new fromPlugins.PageScreenShotPlugin(),
     // new fromPlugins.ComponentScreenShotPlugin(),
-    // new fromPlugins.PageTitlePlugin(),
+    new fromPlugins.PageTitlePlugin(),
     // new fromPlugins.MetricsPlugin(),
   ];
 
