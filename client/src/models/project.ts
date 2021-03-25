@@ -16,9 +16,11 @@ export interface Project {
   base_branch_name: string;
   archive_flag: boolean;
   screen_resolutions: {
-    Desktop: string;
-    Mobile: string;
-    Tablet: string;
+    name: 'Desktop' | 'Tablet' | 'Mobile';
+    x: number;
+    y: number;
+    on: boolean;
+    id: number;
   }[];
 }
 
