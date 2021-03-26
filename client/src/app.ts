@@ -16,6 +16,7 @@ import { FrameworkParser } from './framework-parser';
 import { HttpClient } from './http-client';
 import { exitWithError, getArgs, openBrowserTo, xhrGet } from './util';
 import { UserToken } from './models/user-token';
+import { Organization } from './models/organization';
 import { User } from './models/user';
 import { GitInfo } from './models/git-info';
 import { RunThrough } from './models/run-through';
@@ -26,7 +27,6 @@ import {
   PageScreenshotPluginResult,
   PageTitlePlugin,
 } from './plugins';
-import { Organization } from './models/organization';
 
 console.time('run');
 
@@ -401,7 +401,10 @@ class App {
     token: UserToken,
   ): Promise<void> {
     try {
-      await this.httpClient.postStyleGuide(2, resultData.styleGuide);
+      await this.httpClient.postStyleGuide(
+        token.projectId,
+        resultData.styleGuide,
+      );
     } catch (err) {
       console.log('app : error submitting style guide :', err);
     }
