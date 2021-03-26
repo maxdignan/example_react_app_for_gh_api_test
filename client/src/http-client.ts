@@ -85,8 +85,8 @@ export class HttpClient {
 
   public setToken(token: string) {
     // Hardcoded to test style guide api
-    this.token = 'guvyxLiw0O1GeCpvk8FwRq92DEAZhQSmEso3z68-zykC2MgvRZK-BizBGsE9';
-    // this.token = token;
+    // this.token = 'guvyxLiw0O1GeCpvk8FwRq92DEAZhQSmEso3z68-zykC2MgvRZK-BizBGsE9';
+    this.token = token;
   }
 
   public get<T>(url: string): Promise<T> {
