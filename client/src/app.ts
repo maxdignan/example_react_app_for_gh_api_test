@@ -26,6 +26,7 @@ import {
   PageScreenshotPluginResult,
   PageTitlePlugin,
 } from './plugins';
+import { Organization } from './models/organization';
 
 console.time('run');
 
@@ -140,21 +141,32 @@ class App {
           org_id: organizationId,
         });
         projectId = project.id;
-      } else if (hasOrganization && !hasProjects) {
-        console.log('auth : has organization, no projects');
-        /** @todo */
       } else if (
-        (!hasOrganization && hasProjects) ||
-        (hasOrganization && hasProjects)
+        // (!hasOrganization && hasProjects) ||
+        (hasOrganization && hasProjects) ||
+        (hasOrganization && !hasProjects)
       ) {
-        /** @todo: Prompt user to select project? */
         // Take the org from the project.
-        const project = user.projects.find(p => p.name === appName);
+        let project = user.projects.find(p => p.name === appName);
         if (!project) {
-          /** @todo: Project doesn't exist, create it? */
-          exitWithError(`Could not find project ${appName}`);
+          let organizationForProject: Organization;
+          if (user.orgs.length > 1) {
+            /** @todo: Prompt user to select organization */
+            exitWithError('No organizations found, prompt user to select');
+          } else {
+            organizationForProject = user.orgs[0];
+          }
+          try {
+            const newProject = await this.httpClient.createProject({
+              name: appName,
+              github_url: null,
+              org_id: organizationForProject!.id,
+            });
+            project = newProject;
+          } catch (err) {
+            exitWithError(`Error while creating new project ${appName}`);
+          }
         }
-        // const firstProject = user.projects[0];
         console.log('auth : using project :', project);
         organizationId = project!.org_id;
         projectId = project!.id;
