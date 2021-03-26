@@ -92,7 +92,9 @@ export class URLParser {
       file =>
         file.includes('routing.') ||
         file.includes('router.') ||
-        file.includes('index.'),
+        file.includes('routes.') ||
+        file.includes('index.') ||
+        file.includes('app.'),
     );
     const routes = await Promise.all(
       routerFiles.map(router => this.parseReactRouter(router)),
@@ -104,6 +106,7 @@ export class URLParser {
    * Get all routes from an vue project.
    */
   private async getVueProjectRoutes(files: string[]): Promise<Route[][]> {
+    /** @todo: Need to define an extension */
     const routerFiles = files.filter(
       file =>
         file.includes('routing.') ||
