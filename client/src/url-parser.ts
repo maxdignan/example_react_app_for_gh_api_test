@@ -92,8 +92,10 @@ export class URLParser {
       file =>
         file.includes('routing.') ||
         file.includes('router.') ||
+        file.includes('Routes.') ||
         file.includes('routes.') ||
         file.includes('index.') ||
+        file.includes('App.') ||
         file.includes('app.'),
     );
     const routes = await Promise.all(
