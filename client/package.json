@@ -9,9 +9,7 @@
     "test": "jest --forceExit --coverage --verbose",
     "watch-test": "npm run test -- --watchAll",
     "build-ts": "tsc",
-    "build:watch": "tsc -w",
-    "lint": "tsc --noEmit && eslint \"**/*.{js,ts}\" --quiet --fix",
-    "debug": "npm run build && npm run watch-debug"
+    "build:watch": "tsc -w"
   },
   "dependencies": {
     "glob": "^7.1.6",
