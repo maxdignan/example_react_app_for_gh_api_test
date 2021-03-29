@@ -200,13 +200,18 @@ export class URLParser {
     // Example: ["path="/"", "path="/projects"", "path="/project/:projectId"", ...]
     const pathAttributes = routerElement!.match(/path=.+(\"|\')/g)!;
 
-    // Narrow attributes down to final array
-    // Example: ["/", "/projects", "/project/:projectId", "/about", "*"]
-    const paths = pathAttributes
-      .map(p => p.split('=').pop()!.replace(/\"/g, ''))
-      .filter(p => !!p);
+    // May find multiple matching files but not all of them will contain
+    // <Router> configuration, skip these
+    if (pathAttributes) {
+      // Narrow attributes down to final array
+      // Example: ["/", "/projects", "/project/:projectId", "/about", "*"]
+      const paths = pathAttributes
+        .map(p => p.split('=').pop()!.replace(/\"/g, ''))
+        .filter(p => !!p);
 
-    return this.parseReactRoutes(paths);
+      return this.parseReactRoutes(paths);
+    }
+    return [];
   }
 
   /**
