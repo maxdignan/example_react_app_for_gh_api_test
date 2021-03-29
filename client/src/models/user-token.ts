@@ -1,5 +1,7 @@
-import { tmpdir } from 'os';
 import * as fs from 'fs';
+import { join } from 'path';
+import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
+
 import { exitWithError } from '../util';
 import { User } from './user';
 
@@ -12,14 +14,16 @@ export interface UserTokenInterface {
 }
 
 export class UserToken implements UserTokenInterface {
+  static emtreyDir = '.emtrey';
+  static cryptoSecret = Array.from({ length: 32 }, (_, i) =>
+    String.fromCharCode(88 + ++i),
+  ).join('');
+
   readonly token: string;
   readonly email?: string;
   readonly first_name: string;
   readonly organizationId: number;
   readonly projectId: number;
-
-  // Temp location of cached user token on fs
-  static tokenFile = `${tmpdir()}/emtrey`;
 
   /**
    * Instantiate user token from string.
@@ -35,10 +39,45 @@ export class UserToken implements UserTokenInterface {
     return new UserToken(token);
   }
 
+  static encrypt(
+    text: string,
+    algorithm = 'aes-256-ctr',
+  ): { iv: string; content: string } {
+    const iv = randomBytes(16);
+    const cipher = createCipheriv(algorithm, UserToken.cryptoSecret, iv);
+    const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
+    return {
+      iv: iv.toString('hex'),
+      content: encrypted.toString('hex'),
+    };
+  }
+
+  static decrypt(
+    hash: { iv: string; content: string },
+    algorithm = 'aes-256-ctr',
+  ): string {
+    const decipher = createDecipheriv(
+      algorithm,
+      UserToken.cryptoSecret,
+      Buffer.from(hash.iv, 'hex'),
+    );
+    const decrpyted = Buffer.concat([
+      decipher.update(Buffer.from(hash.content, 'hex')),
+      decipher.final(),
+    ]);
+    return decrpyted.toString();
+  }
+
+  static getJoinedFileName(dir: string): string {
+    return join(dir, UserToken.emtreyDir, 'token');
+  }
+
+  static createEmtreyDirectory(dir: string) {}
   /**
    * Write user info to file system.
    */
   static async saveToFS(
+    dir: string,
     user: User,
     sessionToken: string,
     projectId: number,
@@ -51,35 +90,36 @@ export class UserToken implements UserTokenInterface {
       projectId,
       organizationId,
     };
-    console.log('user token : saving :', token);
+    console.log('user token : saving');
     try {
-      await fs.promises.writeFile(
-        UserToken.tokenFile,
-        JSON.stringify(token),
-        'utf-8',
-      );
+      const emtreyDir = join(dir, UserToken.emtreyDir);
+      const exists = fs.existsSync(emtreyDir);
+      // Need to create parent directory
+      !exists && fs.mkdirSync(emtreyDir);
+      const fileName = UserToken.getJoinedFileName(dir);
+      // Encrypt content
+      const encrypted = UserToken.encrypt(JSON.stringify(token));
+      const fileContent = JSON.stringify(encrypted);
+      await fs.promises.writeFile(fileName, fileContent, 'utf-8');
       return true;
     } catch (err) {
-      exitWithError(err);
+      return !exitWithError(err);
     }
   }
 
   /**
    * Read cached user info from file system.
    */
-  static async readUserFromFS(): Promise<UserToken | null> {
+  static async readUserFromFS(dir: string): Promise<UserToken | null> {
     let token: UserToken | null = null;
-    console.log('user token : reading from file :', UserToken.tokenFile);
     try {
-      const fileContent = await fs.promises.readFile(
-        UserToken.tokenFile,
-        'utf-8',
-      );
-      console.log('got user file contents', fileContent);
-      token = UserToken.fromJSON(fileContent);
+      const fileName = UserToken.getJoinedFileName(dir);
+      console.log('user token : reading from file :', fileName);
+      const fileContent = await fs.promises.readFile(fileName, 'utf-8');
+      token = UserToken.fromJSON(UserToken.decrypt(JSON.parse(fileContent)));
     } catch (err) {
       // Assume error is ENOENT (no entity)
-      // console.log(err);
+      console.log('user token : error :', err);
     }
     return token;
   }
@@ -87,8 +127,9 @@ export class UserToken implements UserTokenInterface {
   /**
    * Deletes cached user info file.
    */
-  static deleteUserFromFS() {
-    return fs.promises.unlink(UserToken.tokenFile);
+  static deleteUserFromFS(dir: string) {
+    const fileName = UserToken.getJoinedFileName(dir);
+    return fs.promises.unlink(fileName);
   }
 
   constructor(data: UserTokenInterface) {
