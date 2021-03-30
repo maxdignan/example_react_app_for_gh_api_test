@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "start": "npm run build-ts && npm run serve",
-    "serve:react": "DEFAULT_LIMIT=0 DRY_RUN=1 node dist/app.js --url=http://localhost3000 --app=example-react",
+    "serve:react": "DEFAULT_LIMIT=0 DRY_RUN=1 node dist/app.js --url=http://localhost:3000 --app=example-react",
     "serve": "DEFAULT_LIMIT=2 DRY_RUN=1 node dist/app.js -p=8080 --app=example-vue",
     "build": "rm -rf ./dist && npm run build-ts",
     "test": "jest --forceExit --coverage --verbose",
