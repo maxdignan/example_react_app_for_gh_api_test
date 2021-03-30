@@ -55,34 +55,6 @@ export class StyleGuideBuilder {
     return colors;
   };
 
-  /**
-   * Read style guide template from disk.
-   */
-  // static async getStyleGuideHTML(): Promise<string> {
-  //   let content = '';
-  //   const path = 'src/style-guide/style-guide-template.html';
-  //   try {
-  //     content = await fs.promises.readFile(path, 'utf-8');
-  //   } catch (err) {
-  //     console.log(err);
-  //   }
-  //   return content;
-  // }
-
-  /**
-   * Read style guide template from disk by name.
-   */
-  static async getStyleGuideHTML(templateName: string): Promise<string> {
-    let content = '';
-    const path = `src/style-guide/templates/${templateName}.html`;
-    try {
-      content = await fs.promises.readFile(path, 'utf-8');
-    } catch (err) {
-      console.log(err);
-    }
-    return content;
-  }
-
   constructor(params: { metaData: MetaDataResult[]; path: string }) {
     const { metaData } = params;
     this.metaData = this.analyzeMetaData(metaData);
@@ -222,9 +194,7 @@ export class StyleGuideBuilder {
      * - Show element states like hover, focus, etc.
      */
     for (const template of styleGuideTemplates) {
-      // Compile template
-      const html = await StyleGuideBuilder.getStyleGuideHTML(template.fileName);
-      const compiledStyleGuideTemplate = compile(html)(templateParams);
+      const compiledStyleGuideTemplate = compile(template.html)(templateParams);
       // console.log('\n\n');
       // console.log('style guide builder : template for', template.fileName);
       // console.log(compiledStyleGuideTemplate);

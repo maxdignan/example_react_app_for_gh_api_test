@@ -1,4 +1,4 @@
-<div
+export default `<div
   style="
     display: flex;
     align-items: center;
@@ -11,4 +11,4 @@
     <button class="{{this}}">Button</button>
   </div>
   {{/each}}
-</div>
+</div>`;

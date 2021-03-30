@@ -1,4 +1,4 @@
-<div
+export default `<div
   style="
     display: flex;
     align-items: center;
@@ -45,4 +45,4 @@
       <blockquote>Hello</blockquote>
     </div>
   </section>
-</div>
+</div>`;
