@@ -102,9 +102,11 @@ class App {
    * Get user from cache or create new.
    */
   private async initializeUserToken(): Promise<UserToken> {
-    // UserToken.deleteUserFromFS();
+    // UserToken.deleteUserFromFS(appDir);
+    const appDir = this.getAppDirectory();
+
     let sessionToken: string;
-    let userToken = await UserToken.readUserFromFS();
+    let userToken = await UserToken.readUserFromFS(appDir);
 
     if (!userToken) {
       console.log('auth : no user token, creating one...');
@@ -146,7 +148,7 @@ class App {
         (hasOrganization && hasProjects) ||
         (hasOrganization && !hasProjects)
       ) {
-        // Take the org from the project.
+        // Take the org from the project
         let project = user.projects.find(p => p.name === appName);
         if (!project) {
           let organizationForProject: Organization;
@@ -170,6 +172,16 @@ class App {
         console.log('auth : using project :', project);
         organizationId = project!.org_id;
         projectId = project!.id;
+      } else if (!hasOrganization && hasProjects) {
+        // No organizations, but projects exist
+        const project = user.projects.find(p => p.name === appName);
+        if (!project) {
+          exitWithError(
+            'Could not find matching project to derive organization',
+          );
+        }
+        organizationId = project!.org_id;
+        projectId = project!.id;
       } else {
         exitWithError('Could not find organization for user');
       }
@@ -181,7 +193,13 @@ class App {
       );
 
       // Save user token for future runs
-      await UserToken.saveToFS(user, sessionToken, projectId!, organizationId!);
+      await UserToken.saveToFS(
+        appDir,
+        user,
+        sessionToken,
+        projectId!,
+        organizationId!,
+      );
       console.log('auth : user token saved');
     } else {
       // Use token from user file

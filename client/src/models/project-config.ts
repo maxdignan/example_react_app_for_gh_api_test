@@ -21,6 +21,7 @@ export class ProjectConfig {
   static defaultLimit = process.env.DEFAULT_LIMIT
     ? +process.env.DEFAULT_LIMIT
     : 0;
+  /** Where screenshots are saved */
   static defaultDir = '.emtrey_tmp';
   static defaultLoginUrl = 'login';
 
