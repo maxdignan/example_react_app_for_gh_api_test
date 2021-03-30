@@ -1,5 +1,4 @@
 import { join } from 'path';
-import * as fs from 'fs';
 import puppeteer from 'puppeteer';
 import { compile } from 'handlebars';
 
