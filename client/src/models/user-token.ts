@@ -82,8 +82,8 @@ export class UserToken implements UserTokenInterface {
     sessionToken: string,
     projectId: number,
     organizationId: number,
-  ) {
-    const token: UserTokenInterface & Pick<User, 'first_name'> = {
+  ): Promise<UserToken> {
+    const token: UserTokenInterface = {
       email: user.email,
       first_name: user.first_name || 'Anon',
       token: sessionToken,
@@ -101,10 +101,10 @@ export class UserToken implements UserTokenInterface {
       const encrypted = UserToken.encrypt(JSON.stringify(token));
       const fileContent = JSON.stringify(encrypted);
       await fs.promises.writeFile(fileName, fileContent, 'utf-8');
-      return true;
     } catch (err) {
-      return !exitWithError(err);
+      exitWithError(err);
     }
+    return token;
   }
 
   /**

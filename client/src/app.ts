@@ -193,7 +193,7 @@ class App {
       );
 
       // Save user token for future runs
-      await UserToken.saveToFS(
+      userToken = await UserToken.saveToFS(
         appDir,
         user,
         sessionToken,
