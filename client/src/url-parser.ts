@@ -128,7 +128,12 @@ export class URLParser {
     let currentPath = '';
 
     for (const block of blocks) {
-      const pathBlocks: string[] = block.match(/path:\s.+/gi)!;
+      // const pathBlocks: string[] = block.match(/path:\s.+/gi)!;
+      const pathBlocks = block.match(/path:\s.+?(?=,)./gi);
+      if (pathBlocks === null) {
+        console.log('url parser : could not find path block :', block);
+        continue;
+      }
       const paths = pathBlocks.map(b => b.replace(/\'|\"|path:\s|,/g, ''));
       const [path] = paths;
       // Must have value, cannot be wildcard
