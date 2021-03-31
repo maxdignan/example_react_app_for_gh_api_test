@@ -418,15 +418,6 @@ class App {
     resultData: Result,
     token: UserToken,
   ): Promise<void> {
-    try {
-      await this.httpClient.postStyleGuide(
-        token.projectId,
-        resultData.styleGuide,
-      );
-    } catch (err) {
-      console.log('app : error submitting style guide :', err);
-    }
-
     if (App.isDryRun) {
       console.log('\n\n***********************');
       console.log('app : dry run detected');

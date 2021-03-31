@@ -158,13 +158,6 @@ export class StyleGuideBuilder {
    * Build HTML template on page using meta data.
    */
   public async buildStyleGuide(page: puppeteer.Page) {
-    /** @todo: Need to make this dynamic based off template content */
-    await page.setViewport({
-      width: 400,
-      height: 300,
-      deviceScaleFactor: 2,
-    });
-
     // Support custom input groups
     let customInputHTML = '';
     if (this.metaDataWithInputElement) {
@@ -193,14 +186,16 @@ export class StyleGuideBuilder {
      * - Show element states like hover, focus, etc.
      */
     for (const template of styleGuideTemplates) {
+      // Set page dimensions
+      await page.setViewport(template.viewport);
+
       const compiledStyleGuideTemplate = compile(template.html)(templateParams);
-      // console.log('\n\n');
       // console.log('style guide builder : template for', template.fileName);
       // console.log(compiledStyleGuideTemplate);
-      // console.log('\n\n');
 
       // Place compiled html in host page
       await page.evaluate(html => {
+        document.body.style.backgroundColor = '#f9f8f8';
         document.body.innerHTML = html;
       }, compiledStyleGuideTemplate);
 
@@ -241,8 +236,8 @@ export class StyleGuideBuilder {
     // Create params to send to API
     const params: StyleGuideParam[] = colorParams.concat(
       buttonParams,
-      // typographyParams,
-      // inputParams,
+      typographyParams,
+      inputParams,
     );
 
     // console.log('style guide builder : params', params);
