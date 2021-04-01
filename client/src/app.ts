@@ -446,11 +446,8 @@ class App {
     }
 
     if (App.isDryRun) {
-      console.log('\n\n***********************');
-      console.log('app : dry run detected');
-      console.log('***********************');
       for (const result of resultData.results) {
-        console.log('\napp : result :', result, '\n');
+        this.logger.debug('\napp : result :', result, '\n');
       }
       // console.log('\ncstyle guide', resultData.styleGuide);
       return;
@@ -468,7 +465,13 @@ class App {
         project_id: token.projectId,
       };
       runThroughResult = await this.httpClient.postRunThrough(runThroughParams);
-      console.log('app : results : submitted run through :', runThroughResult);
+      this.logger.debug(
+        'app : results : submitted run through :',
+        runThroughResult,
+      );
+      this.logger.info(
+        `Submitting a new run-through for commit ${runThroughResult.commit}...`,
+      );
     } catch (err) {
       exitWithError(err);
     }
@@ -487,7 +490,6 @@ class App {
         page_route: result.url,
         page_title: data, // Required by have content by API
         run_through_id: runThroughResult!.id,
-        // run_through_id: 48,
       };
 
       // console.log('app : results : page capture params :', pageCaptureParams);
@@ -495,8 +497,14 @@ class App {
       let pageCapture: PageCapture;
 
       try {
+        this.logger.startAction(
+          `Uploading captures for ${pageCaptureParams.page_route}`,
+        );
         pageCapture = await this.httpClient.postPageCapture(pageCaptureParams);
-        console.log('app : results : submitted page capture :', pageCapture);
+        this.logger.debug(
+          'app : results : submitted page capture :',
+          pageCapture,
+        );
         const { data } = result.plugins.find(
           p => p.pluginId === PageScreenShotPlugin.id,
         ) as PluginResult<PageScreenshotPluginResult>;
@@ -506,22 +514,25 @@ class App {
         }
 
         await this.httpClient.postScreenshotToS3(data.path, pageCapture);
-        console.log('app : results : submitted to s3');
+        this.logger.debug('app : results : submitted to s3');
 
         await this.httpClient.startDiff(pageCapture);
-        console.log(
+        this.logger.debug(
           'app : results : started diff :',
           pageCapture.page_capture.s3_object_key,
         );
+        this.logger.endAction('done');
       } catch (err) {
         exitWithError(err);
       }
 
       try {
+        this.logger.startAction('Uploading found styles to Emtrey...');
         await this.httpClient.postStyleGuide(
           token.projectId,
           resultData.styleGuide,
         );
+        this.logger.endAction('done');
       } catch (err) {
         console.log('app : error submitting style guide :', err);
       }
