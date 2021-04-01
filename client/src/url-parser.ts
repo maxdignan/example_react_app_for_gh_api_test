@@ -5,13 +5,16 @@ import { ParserConfig, Framework, FileExtension } from './models/parser';
 import { Route } from './models/route';
 import { ComponentScreenShotPlugin } from './plugins';
 import { exitWithError, uniqueArrayBy } from './util';
+import { Logger } from './logger';
 
 /**
  * Sniffs a project directory to compile a list of URLs to hit.
  */
 export class URLParser {
+  static isDebug = process.env.DEBUG ? !!+process.env.DEBUG : false;
   private framework: Framework;
   private extension: FileExtension;
+  private logger: Logger = new Logger(URLParser.isDebug);
 
   constructor(config: ParserConfig = {} as ParserConfig) {
     this.framework = config.framework;
@@ -66,7 +69,8 @@ export class URLParser {
     }
 
     const flat = uniqueArrayBy('url', routes.flat());
-    console.log('url parser : routes :', flat);
+    this.logger.debug('url parser : routes :', flat);
+    this.logger.info(`Found ${flat.length} route${flat.length > 1 ? 's' : ''}`);
     return flat;
   }
 
@@ -131,7 +135,8 @@ export class URLParser {
       // const pathBlocks: string[] = block.match(/path:\s.+/gi)!;
       const pathBlocks = block.match(/path:\s.+?(?=,)./gi);
       if (pathBlocks === null) {
-        console.log('url parser : could not find path block :', block);
+        this.logger.error('Could not find any routes');
+        this.logger.debug('url parser : could not find path block :', block);
         continue;
       }
       const paths = pathBlocks.map(b => b.replace(/\'|\"|path:\s|,/g, ''));
