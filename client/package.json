@@ -12,6 +12,7 @@
     "build:watch": "tsc -w"
   },
   "dependencies": {
+    "chalk": "^4.1.0",
     "glob": "^7.1.6",
     "handlebars": "^4.7.6",
     "puppeteer": "^5.2.1",
