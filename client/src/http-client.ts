@@ -8,11 +8,16 @@ import { User } from './models/user';
 import { exitWithError } from './util';
 import { StyleGuideParam } from './style-guide/style-guide-param';
 import { Organization } from './models/organization';
+import { Logger } from './logger';
 
 export class HttpClient {
+  static isDebug = process.env.DEBUG ? !!+process.env.DEBUG : false;
+
   /** Location of API. */
   // static apiURL = 'app-qa.emtrey.io';
   static apiURL = 'app-dev.emtrey.io';
+
+  static logger: Logger = new Logger(HttpClient.isDebug);
 
   static request<T>(
     method: 'GET' | 'POST' = 'GET',
@@ -28,7 +33,7 @@ export class HttpClient {
     const headers = token ? { api_session_token: token } : null;
 
     if (!token) {
-      console.log('\n\nhttp : no token supplied\n\n');
+      HttpClient.logger.debug('\n\nhttp : no token supplied\n\n');
     }
 
     const options = {
@@ -38,13 +43,13 @@ export class HttpClient {
       method,
     } as RequestOptions;
 
-    // console.log('http client : request :', options);
+    // HttpClient.logger.debug('http client : request :', options);
 
     return new Promise((resolve, reject) => {
       const req = request(options, res => {
         // 500's and 400's should reject, everything else passes
         const statusCode = res.statusCode?.toString();
-        console.log('http : status :', statusCode);
+        HttpClient.logger.debug('http : status :', statusCode);
         if (statusCode?.startsWith('5') || statusCode?.startsWith('4')) {
           const message = `http : bad response for url : ${options.path}, status : ${res.statusMessage}`;
           reject(message);
@@ -63,7 +68,10 @@ export class HttpClient {
               data = JSON.parse(body.toString());
             }
           } catch (err) {
-            console.log('http : error parsing data as json :', data!);
+            HttpClient.logger.debug(
+              'http : error parsing data as json :',
+              data!,
+            );
             resolve(data!);
           }
           resolve(data!);
@@ -94,7 +102,7 @@ export class HttpClient {
   }
 
   public post<T>(url: string, params: { [key: string]: any }): Promise<T> {
-    console.log('http : post :', url, this.token);
+    HttpClient.logger.debug('http : post :', url, this.token);
     return HttpClient.request(
       'POST',
       HttpClient.apiURL,
@@ -120,7 +128,7 @@ export class HttpClient {
         HttpClient.apiURL,
         path,
       );
-      // console.log('http client : generated token :', res);
+      // HttpClient.logger.debug('http client : generated token :', res);
       token = res.token;
     } catch (err) {
       exitWithError(err);
@@ -211,9 +219,9 @@ export class HttpClient {
       };
 
       const req = request(options, res => {
-        console.log(`STATUS: ${res.statusCode}`);
-        console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-        res.on('data', chunk => console.log(`BODY: ${chunk}`));
+        HttpClient.logger.debug(`STATUS: ${res.statusCode}`);
+        HttpClient.logger.debug(`HEADERS: ${JSON.stringify(res.headers)}`);
+        res.on('data', chunk => HttpClient.logger.debug(`BODY: ${chunk}`));
         res.on('end', () => resolve());
       });
 

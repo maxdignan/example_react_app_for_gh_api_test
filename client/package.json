@@ -3,17 +3,16 @@
   "version": "0.0.0",
   "scripts": {
     "start": "npm run build-ts && npm run serve",
-    "serve:react": "DEFAULT_LIMIT=0 DRY_RUN=1 node dist/app.js --url=http://localhost:3000 --dir=/Users/brad/h2/emtrey/examples/react --app=example-react",
-    "serve": "DEFAULT_LIMIT=2 DRY_RUN=1 node dist/app.js --url=http://localhost:8080 --dir=/Users/brad/h2/emtrey/examples/vue --app=example-vue",
+    "serve:react": "DEFAULT_LIMIT=0 DRY_RUN=1 node dist/app.js --url=http://localhost:3000 --app=example-react",
+    "serve": "DEFAULT_LIMIT=2 DRY_RUN=1 node dist/app.js -p=8080 --app=example-vue",
     "build": "rm -rf ./dist && npm run build-ts",
     "test": "jest --forceExit --coverage --verbose",
     "watch-test": "npm run test -- --watchAll",
     "build-ts": "tsc",
-    "watch-ts": "tsc -w",
-    "lint": "tsc --noEmit && eslint \"**/*.{js,ts}\" --quiet --fix",
-    "debug": "npm run build && npm run watch-debug"
+    "build:watch": "tsc -w"
   },
   "dependencies": {
+    "chalk": "^4.1.0",
     "glob": "^7.1.6",
     "handlebars": "^4.7.6",
     "puppeteer": "^5.2.1",

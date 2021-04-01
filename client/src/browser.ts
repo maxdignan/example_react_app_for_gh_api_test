@@ -13,8 +13,10 @@ import { StyleGuideBuilder } from './style-guide/style-guide-builder';
 import { StyleGuideParam } from './style-guide/style-guide-param';
 import { AppArgs, getArgFor } from './models/args';
 import * as fromPlugins from './plugins';
+import { Logger } from './logger';
 
 export class Browser {
+  static isDebug = process.env.DEBUG ? !!+process.env.DEBUG : false;
   static viewports = [
     // Desktop
     { w: 1400, h: 900, mobile: false },
@@ -33,6 +35,8 @@ export class Browser {
     new fromPlugins.PageTitlePlugin(),
     // new fromPlugins.MetricsPlugin(),
   ];
+
+  private logger: Logger = new Logger(Browser.isDebug);
 
   /**
    * Gets the application base URL which will be visiting for each route.
@@ -86,7 +90,11 @@ export class Browser {
         },
         config.login!.password,
       );
-      console.log('browser : login form filled :', email + ' / ' + password);
+      this.logger.info(`Signing in using ${email} and ${password}`);
+      this.logger.debug(
+        'browser : login form filled :',
+        email + ' / ' + password,
+      );
       return true;
     } catch (err) {
       // console.error(err);
@@ -108,14 +116,15 @@ export class Browser {
   ): Promise<boolean> {
     const url = `${serverUrl}/${config.getLoginUrl()}`;
 
-    console.log('browser : auth :', url);
+    this.logger.info('Redirecting to authorize user...');
+    this.logger.debug('browser : auth :', url);
 
     // Navigate to page.
     try {
       await page.goto(url, { waitUntil: ['load'] });
     } catch (err) {
-      console.log('browser : auth : ERROR!');
-      console.log(err);
+      this.logger.error(`An error occurred while loading ${url}`);
+      this.logger.error(err);
       return false;
     }
 
@@ -128,7 +137,8 @@ export class Browser {
     const loginButton = await page.$x("//button[contains(., 'Login')]");
 
     if (loginButton.length > 0) {
-      console.log('browser : auth : clicking login button...');
+      this.logger.info('Attempting to authorize using credentials...');
+      this.logger.debug('browser : auth : clicking login button...');
       try {
         await loginButton[0].click();
       } catch (err) {
@@ -150,7 +160,8 @@ export class Browser {
       console.error(err);
     }
 
-    console.log('browser : authorized');
+    this.logger.info('User authenticated. Continuing...');
+    this.logger.debug('browser : authorized');
     this.authorized = true;
 
     return true;
@@ -170,7 +181,8 @@ export class Browser {
 
     const url = route.getFullUrl(serverUrl, config);
 
-    console.log(`browser : visit : ${url}`);
+    this.logger.info(`Processing ${url}`);
+    this.logger.debug(`browser : visit : ${url}`);
 
     // Navigate to the route.
     await page.goto(url, { waitUntil: ['load'] });
@@ -196,7 +208,8 @@ export class Browser {
     let screenShotResults: ScreenshotResult[] = [];
 
     for (const viewport of Browser.viewports) {
-      console.log('browser : visit route : viewport', viewport);
+      this.logger.startAction(`  Rendering at ${viewport.w}x${viewport.h}`);
+      this.logger.debug('browser : visit route : viewport', viewport);
 
       // Set viewport dimensions
       await page.setViewport({
@@ -221,7 +234,8 @@ export class Browser {
         exitWithError(err);
       }
 
-      console.log('browser : visit route : completed');
+      this.logger.endAction('done');
+      this.logger.debug('browser : visit route : completed');
 
       screenShotResults.push({ url, plugins });
     }
@@ -254,7 +268,9 @@ export class Browser {
 
     // Some route needs to auth, lets auth first then go take shots.
     const willAuth = routes.some(r => config.willAuthorizeURL(r.url));
-    console.log('browser : will auth :', willAuth);
+    this.logger.debug('browser : will auth :', willAuth);
+    if (willAuth)
+      this.logger.info(`Found at least one route requires user authentication`);
 
     if (!this.authorized && willAuth) {
       // Hit the login route first to capture unauthorized/login view.
@@ -346,7 +362,7 @@ export class Browser {
     const pluginResults = await Promise.all(
       plugins.map(plugin => plugin.run(page, options)),
     );
-    console.log('plugin : results :', pluginResults);
+    this.logger.debug('plugin : results :', pluginResults);
     return pluginResults;
   }
 
