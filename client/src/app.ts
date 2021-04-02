@@ -529,7 +529,20 @@ class App {
       }
     }
 
+    this.logLinkForRunThrough(token.projectId, runThroughResult!.id);
+
     return;
+  }
+
+  /**
+   * Output link to view project in web app.
+   */
+  private logLinkForRunThrough(projectId: number, runThroughId: number) {
+    this.logger.notice(
+      'Emtrey run through completed. To view the results visit:',
+    );
+    const url = `https://${HttpClient.apiURL}/projects/${projectId}/runs/${runThroughId}`;
+    this.logger.notice(url);
   }
 }
 
