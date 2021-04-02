@@ -3,7 +3,6 @@ const glob = require('glob');
 
 import { ParserConfig, Framework, FileExtension } from './models/parser';
 import { Route } from './models/route';
-import { ComponentScreenShotPlugin } from './plugins';
 import { exitWithError, uniqueArrayBy } from './util';
 import { Logger } from './logger';
 

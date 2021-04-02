@@ -23,7 +23,7 @@ export class Browser {
     // Tablet iPad portrait
     { w: 768, h: 1024, mobile: true },
     // iPhone 11
-    { w: 1400, h: 1200, mobile: false },
+    { w: 375, h: 812, mobile: true },
   ];
 
   // Can be thought of as dpr of screenshot
@@ -207,7 +207,11 @@ export class Browser {
 
     let screenShotResults: ScreenshotResult[] = [];
 
-    for (const viewport of Browser.viewports) {
+    const viewports = process.env.LIMIT_VIEWPORT
+      ? Browser.viewports.slice(0, 1)
+      : Browser.viewports;
+
+    for (const viewport of viewports) {
       this.logger.startAction(`  Rendering at ${viewport.w}x${viewport.h}`);
       this.logger.debug('browser : visit route : viewport', viewport);
 

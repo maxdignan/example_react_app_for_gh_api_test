@@ -1,9 +1,7 @@
-<div
+export default `<div
   style="
     display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
+    flex-direction: column;
   "
 >
   <section>
@@ -15,7 +13,7 @@
     <h6>Heading 6</h6>
   </section>
 
-  <section>
+  <section style="margin: 1em 0 1em 0">
     <div>Paragraph</div>
     <p>
       Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin aliquet
@@ -24,25 +22,23 @@
     </p>
   </section>
 
-  <section>
-    <div>
-      <div>Anchor</div>
-      <a href="#">Link</a>
+  <section style="margin: 0 0 1em 0">
+    <div>Block Quote:</div>
+    <blockquote>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin aliquet
+    pulvinar nisi.</blockquote>
+  </section>
+
+  <section style="display: flex">
+    <div style="margin-right: 1em">
+      <a href="#">Anchor Link</a>
     </div>
 
-    <div>
-      <div>Bold</div>
+    <div style="margin-right: 1em">
       <b>Bold</b>
     </div>
 
     <div>
-      <div>Italic</div>
       <i>Italic</i>
     </div>
-
-    <div>
-      <div>Blockquote</div>
-      <blockquote>Hello</blockquote>
-    </div>
   </section>
-</div>
+</div>`;
