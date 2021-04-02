@@ -45,6 +45,15 @@ export class URLParser {
   }
 
   /**
+   * Our route parser could not find any valid routes,
+   * we will still scrape the index route.
+   */
+  private fallbackToIndexRoute(): Route[] {
+    const route = Route.fromURL('/');
+    return [route];
+  }
+
+  /**
    * Entrypoint for app. Returns array of all route paths.
    */
   public async getRoutes(path: string): Promise<Route[]> {
@@ -67,10 +76,17 @@ export class URLParser {
       throw new Error('Framework not implemented yet');
     }
 
-    const flat = uniqueArrayBy('url', routes.flat());
-    this.logger.debug('url parser : routes :', flat);
-    this.logger.info(`Found ${flat.length} route${flat.length > 1 ? 's' : ''}`);
-    return flat;
+    let flatRoutes = uniqueArrayBy('url', routes.flat());
+    this.logger.debug('url parser : routes :', flatRoutes);
+    this.logger.info(
+      `Found ${flatRoutes.length} route${flatRoutes.length > 1 ? 's' : ''}`,
+    );
+
+    if (flatRoutes.length === 0) {
+      flatRoutes = this.fallbackToIndexRoute();
+    }
+
+    return flatRoutes;
   }
 
   /**
