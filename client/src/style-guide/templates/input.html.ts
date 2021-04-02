@@ -1,4 +1,4 @@
-<div
+export default `<div
   style="
     display: flex;
     align-items: center;
@@ -29,4 +29,4 @@
   <div style="padding: 1em;">
     <input type="checkbox" />
   </div>
-</div>
+</div>`;
