@@ -14,8 +14,7 @@ export class HttpClient {
   static isDebug = process.env.DEBUG ? !!+process.env.DEBUG : false;
 
   /** Location of API. */
-  // static apiURL = 'app-qa.emtrey.io';
-  static apiURL = 'app-dev.emtrey.io';
+  static apiURL = process.env.API_URL || 'app.emtrey.io';
 
   static logger: Logger = new Logger(HttpClient.isDebug);
 
@@ -90,6 +89,10 @@ export class HttpClient {
   }
 
   public token: string;
+
+  constructor() {
+    HttpClient.logger.debug('http : using api :', HttpClient.apiURL);
+  }
 
   public setToken(token: string) {
     // Hardcoded to test style guide api
