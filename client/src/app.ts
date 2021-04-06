@@ -3,6 +3,7 @@
 import { existsSync, mkdirSync, readFile } from 'fs';
 import { exec } from 'child_process';
 import { join } from 'path';
+import { prompt } from 'prompts';
 import * as rimraf from 'rimraf';
 
 import { Route } from './models/route';
@@ -151,7 +152,6 @@ class App {
         });
         projectId = project.id;
       } else if (
-        // (!hasOrganization && hasProjects) ||
         (hasOrganization && hasProjects) ||
         (hasOrganization && !hasProjects)
       ) {
@@ -160,8 +160,12 @@ class App {
         if (!project) {
           let organizationForProject: Organization;
           if (user.orgs.length > 1) {
-            /** @todo: Prompt user to select organization */
-            exitWithError('No organizations found, prompt user to select');
+            const {
+              organizationId,
+            } = await this.promptUserToSelectOrganization(user.orgs);
+            organizationForProject = user.orgs.find(
+              o => o.id === organizationId,
+            )!;
           } else {
             organizationForProject = user.orgs[0];
           }
@@ -227,8 +231,20 @@ class App {
       sessionToken = token;
       this.httpClient.setToken(sessionToken);
     }
-
     return userToken!;
+  }
+
+  private async promptUserToSelectOrganization(
+    organizations: ReadonlyArray<Organization>,
+  ): Promise<{ organizationId: number }> {
+    const choices = organizations.map(o => ({ title: o.name, value: o.id }));
+    const menu = {
+      choices,
+      type: 'select',
+      name: 'organizationId',
+      message: 'Select an organization for this project',
+    };
+    return await prompt(menu);
   }
 
   /**

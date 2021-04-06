@@ -12,6 +12,7 @@
     "chalk": "^4.1.0",
     "glob": "^7.1.6",
     "handlebars": "^4.7.6",
+    "prompts": "^2.4.1",
     "puppeteer": "^5.2.1",
     "rimraf": "^3.0.2"
   }
