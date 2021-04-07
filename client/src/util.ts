@@ -99,8 +99,6 @@ export const getElementClassCounts = (classes: string[][]) => {
     return a;
   }, {} as { [key: string]: number });
 
-  console.log(classCountMap);
-
   // Order items by highest recurrence
   let result = Object.keys(classCountMap).sort((a, b) =>
     classCountMap[a] > classCountMap[b] ? -1 : 1,

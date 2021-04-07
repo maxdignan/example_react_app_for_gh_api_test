@@ -12,18 +12,19 @@ import { Plugin, PluginOptions, PluginResult } from './models/plugin';
 import { StyleGuideBuilder } from './style-guide/style-guide-builder';
 import { StyleGuideParam } from './style-guide/style-guide-param';
 import { AppArgs, getArgFor } from './models/args';
-import * as fromPlugins from './plugins';
+import { Viewport } from './models/viewport';
 import { Logger } from './logger';
+import * as fromPlugins from './plugins';
 
 export class Browser {
   static isDebug = process.env.DEBUG ? !!+process.env.DEBUG : false;
-  static viewports = [
+  static viewports: ReadonlyArray<Viewport> = [
     // Desktop
-    { w: 1400, h: 900, mobile: false },
+    { w: 1400, h: 900, mobile: false, id: 1 },
     // Tablet iPad portrait
-    { w: 768, h: 1024, mobile: true },
+    { w: 768, h: 1024, mobile: true, id: 2 },
     // iPhone 11
-    { w: 375, h: 812, mobile: true },
+    { w: 375, h: 812, mobile: true, id: 3 },
   ];
 
   // Can be thought of as dpr of screenshot
@@ -241,7 +242,7 @@ export class Browser {
       this.logger.endAction('done');
       this.logger.debug('browser : visit route : completed');
 
-      screenShotResults.push({ url, plugins });
+      screenShotResults.push({ url, plugins, viewport });
     }
 
     return screenShotResults;
@@ -257,6 +258,7 @@ export class Browser {
     config: ProjectConfig,
   ): Promise<Result> {
     const browser = await puppeteer.launch(this.launchConfig);
+    const userAgent = await browser.userAgent();
 
     // Limit max amount of shots
     if (config.limit) {
@@ -346,9 +348,9 @@ export class Browser {
     }
 
     await browser.close();
-    // console.log('browser : closed');
 
-    return { results, styleGuide };
+    const browserInfo = { userAgent };
+    return { results, styleGuide, browserInfo };
   }
 
   /**

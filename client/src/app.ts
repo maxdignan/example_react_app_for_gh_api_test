@@ -10,7 +10,7 @@ import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
 import { AppArgs, getArgFor } from './models/args';
 import { Result } from './models/screenshot-result';
-import { ParserConfig } from './models/parser';
+import { Framework, ParserConfig } from './models/parser';
 import { Browser } from './browser';
 import { URLParser } from './url-parser';
 import { FrameworkParser } from './framework-parser';
@@ -23,12 +23,12 @@ import { GitInfo } from './models/git-info';
 import { RunThrough } from './models/run-through';
 import { PageCapture, PageCaptureAPIParams } from './models/page-capture';
 import { PluginResult } from './models/plugin';
+import { Logger } from './logger';
 import {
   PageScreenShotPlugin,
   PageScreenshotPluginResult,
   PageTitlePlugin,
 } from './plugins';
-import { Logger } from './logger';
 
 console.time('run');
 
@@ -99,8 +99,7 @@ class App {
       framework,
       extension,
     };
-    // this.logger.debug('app : parser framework :', Framework[framework]);
-    // this.logger.debug('app : parser extension :', extension);
+    this.logger.debug('app : parser :', Framework[framework], extension);
     return parserConfig;
   }
 
@@ -489,22 +488,22 @@ class App {
     for (const result of resultData.results) {
       // console.log('\n\n', 'app : result :', result, '\n\n');
 
-      const { data } = result.plugins.find(
+      const { data: page_title } = result.plugins.find(
         p => p.pluginId === PageTitlePlugin.id,
       ) as PluginResult<string>;
 
       const pageCaptureParams: PageCaptureAPIParams = {
         page_route: result.url,
-        page_title: 'Page title', // Required by have content by API - this needs changed
+        page_title,
         browser: 'chrome', // Required by have content by API
         type: 'page', // Required by have content by API
-        user_agent: 'Gecko', // Required by have content by API
+        user_agent: resultData.browserInfo.userAgent, // Required by have content by API
         name: 'Component title', // Required by have content by API - Should be component name in the future
-        screen_resolution_id: 1, // Required by have content by API - Needs to be tracked in the results data
+        screen_resolution_id: result.viewport.id, // Required by have content by API - Needs to be tracked in the results data
         run_through_id: runThroughResult!.id,
       };
 
-      // console.log('app : results : page capture params :', pageCaptureParams);
+      console.log('app : results : page capture params :', pageCaptureParams);
 
       let pageCapture: PageCapture;
 
