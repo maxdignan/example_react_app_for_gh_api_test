@@ -495,7 +495,12 @@ class App {
 
       const pageCaptureParams = {
         page_route: result.url,
-        page_title: data, // Required by have content by API
+        page_title: "Page title", // Required by have content by API - this needs changed
+        browser: "chrome", // Required by have content by API
+        type: "page", // Required by have content by API
+        user_agent: "Gecko", // Required by have content by API
+        name: "Component title", // Required by have content by API - Should be component name in the future
+        screen_resolution_id: 1, // Required by have content by API - Needs to be tracked in the results data
         run_through_id: runThroughResult!.id,
       };
 
