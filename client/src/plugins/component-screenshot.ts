@@ -3,6 +3,8 @@ import { join } from 'path';
 
 import { exitWithError } from '../util';
 import { Plugin, PluginOptions } from '../models/plugin';
+import { logger } from '../logger';
+import script from './component-screenshot-script';
 
 // Response from running plugin script in puppeteer page instance
 export type ComponentScreenShotPluginData = string;
@@ -35,7 +37,7 @@ export class ComponentScreenShotPlugin extends Plugin<any> {
 
   async run(page: puppeteer.Page, options: PluginOptions) {
     // Inject plugin script into env
-    await page.addScriptTag({ path: 'src/plugins/component-screenshot.js' });
+    await page.addScriptTag({ content: script });
 
     // Run injected script, return is JSON stringified object.
     const scriptResult: string[] = await page.evaluate(() => {
@@ -46,7 +48,7 @@ export class ComponentScreenShotPlugin extends Plugin<any> {
 
     const extension = this.getExtension();
 
-    console.log('plugin : component screenshot result :', scriptResult);
+    logger.debug('component plugin : script result :', scriptResult);
 
     // Parse injected script result and create extended data
     const scriptData: ExtendedComponentScreenShotPluginData[] = scriptResult.map(
@@ -79,7 +81,7 @@ export class ComponentScreenShotPlugin extends Plugin<any> {
 
     const screenshots = await Promise.all(asyncScreenshots);
 
-    console.log('component screenshot plugin : screenshots :', screenshots);
+    logger.debug('component plugin : screenshot :', screenshots);
 
     return super.processRun(ComponentScreenShotPlugin.id, screenshots);
   }

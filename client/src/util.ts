@@ -146,3 +146,5 @@ export const Example = () => {
     readline.close();
   });
 };
+
+export const isDebug = () => (process.env.DEBUG ? !!+process.env.DEBUG : false);

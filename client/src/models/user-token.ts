@@ -3,7 +3,7 @@ import { join } from 'path';
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 
 import { exitWithError } from '../util';
-import { Logger } from '../logger';
+import { logger } from '../logger';
 import { User } from './user';
 
 export interface UserTokenInterface {
@@ -15,9 +15,6 @@ export interface UserTokenInterface {
 }
 
 export class UserToken implements UserTokenInterface {
-  static isDebug = process.env.DEBUG ? !!+process.env.DEBUG : false;
-  static logger: Logger = new Logger(UserToken.isDebug);
-
   static emtreyDir = '.emtrey';
   static cryptoSecret = Array.from({ length: 32 }, (_, i) =>
     String.fromCharCode(88 + ++i),
@@ -94,7 +91,7 @@ export class UserToken implements UserTokenInterface {
       projectId,
       organizationId,
     };
-    UserToken.logger.debug('user token : saving');
+    logger.debug('user token : saving');
     try {
       const emtreyDir = join(dir, UserToken.emtreyDir);
       const exists = fs.existsSync(emtreyDir);
@@ -118,12 +115,12 @@ export class UserToken implements UserTokenInterface {
     let token: UserToken | null = null;
     try {
       const fileName = UserToken.getJoinedFileName(dir);
-      UserToken.logger.debug('user token : reading from file :', fileName);
+      logger.debug('user token : reading from file :', fileName);
       const fileContent = await fs.promises.readFile(fileName, 'utf-8');
       token = UserToken.fromJSON(UserToken.decrypt(JSON.parse(fileContent)));
     } catch (err) {
       // Assume error is ENOENT (no entity)
-      UserToken.logger.debug('user token : error :', err);
+      logger.debug('user token : error :', err);
     }
     return token;
   }
