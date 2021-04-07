@@ -5,7 +5,7 @@ class Project extends React.Component {
     return (
       <div className="project">
         <h1>Project!</h1>
-        <p>{this.props.params.projectId} + kjihoajfdklwnfqeiwhjiocdjskalfensjkfndksajfdioksjaklvdjsakjdskl</p>
+        <p>{this.props.params.projectId} + hello there!</p>
       </div>
     );
   }
