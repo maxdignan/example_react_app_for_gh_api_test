@@ -3,7 +3,7 @@ import { request, RequestOptions } from 'https';
 
 import { Project, CreateProjectAPIParams } from './models/project';
 import { RunThrough } from './models/run-through';
-import { PageCapture } from './models/page-capture';
+import { PageCapture, PageCaptureAPIParams } from './models/page-capture';
 import { User } from './models/user';
 import { exitWithError } from './util';
 import { StyleGuideParam } from './style-guide/style-guide-param';
@@ -195,11 +195,9 @@ export class HttpClient {
       -d "page_route=/hellopage&page_title=HelloPage&run_through_id=48" \
       -X POST https://app-dev.emtrey.io/api/page-capture
    */
-  public async postPageCapture(params: {
-    page_route: string;
-    page_title: string;
-    run_through_id: number;
-  }): Promise<PageCapture> {
+  public async postPageCapture(
+    params: PageCaptureAPIParams,
+  ): Promise<PageCapture> {
     return this.post<PageCapture>('api/page-capture', params);
   }
 

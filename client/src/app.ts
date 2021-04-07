@@ -21,7 +21,7 @@ import { Organization } from './models/organization';
 import { User } from './models/user';
 import { GitInfo } from './models/git-info';
 import { RunThrough } from './models/run-through';
-import { PageCapture } from './models/page-capture';
+import { PageCapture, PageCaptureAPIParams } from './models/page-capture';
 import { PluginResult } from './models/plugin';
 import {
   PageScreenShotPlugin,
@@ -493,13 +493,13 @@ class App {
         p => p.pluginId === PageTitlePlugin.id,
       ) as PluginResult<string>;
 
-      const pageCaptureParams = {
+      const pageCaptureParams: PageCaptureAPIParams = {
         page_route: result.url,
-        page_title: "Page title", // Required by have content by API - this needs changed
-        browser: "chrome", // Required by have content by API
-        type: "page", // Required by have content by API
-        user_agent: "Gecko", // Required by have content by API
-        name: "Component title", // Required by have content by API - Should be component name in the future
+        page_title: 'Page title', // Required by have content by API - this needs changed
+        browser: 'chrome', // Required by have content by API
+        type: 'page', // Required by have content by API
+        user_agent: 'Gecko', // Required by have content by API
+        name: 'Component title', // Required by have content by API - Should be component name in the future
         screen_resolution_id: 1, // Required by have content by API - Needs to be tracked in the results data
         run_through_id: runThroughResult!.id,
       };
