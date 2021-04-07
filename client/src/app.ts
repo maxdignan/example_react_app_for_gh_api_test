@@ -21,10 +21,15 @@ import { Organization } from './models/organization';
 import { User } from './models/user';
 import { GitInfo } from './models/git-info';
 import { RunThrough } from './models/run-through';
-import { PageCapture, PageCaptureAPIParams } from './models/page-capture';
+import {
+  PageCapture,
+  PageCaptureAPIParams,
+  PageCaptureType,
+} from './models/page-capture';
 import { PluginResult } from './models/plugin';
 import { logger } from './logger';
 import {
+  ComponentScreenShotPlugin,
   PageScreenShotPlugin,
   PageScreenshotPluginResult,
   PageTitlePlugin,
@@ -450,10 +455,11 @@ class App {
     token: UserToken,
   ): Promise<void> {
     if (App.isDryRun) {
+      logger.debug('app : results');
       for (const result of resultData.results) {
-        logger.debug('\napp : result :', result, '\n');
+        logger.debug(result);
       }
-      // console.log('\ncstyle guide', resultData.styleGuide);
+      // console.log('style guide', resultData.styleGuide);
       return;
     }
 
@@ -463,7 +469,6 @@ class App {
       const [branch, commit] = await this.getGitInfo();
       const runThroughParams = {
         // API would error when branch not set to master
-        // branch: 'master',
         branch,
         commit,
         project_id: token.projectId,
@@ -481,8 +486,14 @@ class App {
     // loop through results and post each to API
 
     for (const result of resultData.results) {
-      // console.log('\n\n', 'app : result :', result, '\n\n');
+      // Get result type
+      const componentPlugin = result.plugins.find(
+        p => p.pluginId === ComponentScreenShotPlugin.id,
+      ) as PluginResult<any>;
+      const type: PageCaptureType =
+        componentPlugin?.data?.length > 0 ? 'component' : 'page';
 
+      // Get page title from plugin group
       const { data: page_title } = result.plugins.find(
         p => p.pluginId === PageTitlePlugin.id,
       ) as PluginResult<string>;
@@ -490,8 +501,8 @@ class App {
       const pageCaptureParams: PageCaptureAPIParams = {
         page_route: result.url,
         page_title,
-        browser: 'chrome', // Required by have content by API
-        type: 'page', // Required by have content by API
+        browser: 'chrome',
+        type,
         user_agent: resultData.browserInfo.userAgent, // Required by have content by API
         name: 'Component title', // Required by have content by API - Should be component name in the future
         screen_resolution_id: result.viewport.id, // Required by have content by API - Needs to be tracked in the results data

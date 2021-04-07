@@ -31,7 +31,7 @@ export class ComponentScreenShotPlugin extends Plugin<any> {
     return `${routeId}_${idParts[0]}_${index}`;
   }
 
-  getExtension(): 'jpeg' | 'png' {
+  private getExtension(): 'jpeg' | 'png' {
     return 'png';
   }
 
