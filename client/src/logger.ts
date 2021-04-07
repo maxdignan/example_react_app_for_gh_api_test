@@ -1,14 +1,11 @@
 import chalk from 'chalk';
+import { isDebug } from './util';
 
 const log = console.log;
 const purple = chalk.hex('#415de1');
 
-export class Logger {
-  private debugMode: Boolean = false;
-
-  constructor(debugMode: Boolean = false) {
-    this.debugMode = debugMode;
-  }
+class Logger {
+  constructor(private debugMode = isDebug()) {}
 
   public debug(...obj: any) {
     if (this.debugMode) log(obj);
@@ -63,3 +60,5 @@ export class Logger {
     log();
   }
 }
+
+export const logger = new Logger();

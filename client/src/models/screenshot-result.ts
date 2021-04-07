@@ -1,5 +1,6 @@
 import { StyleGuideParam } from '../style-guide/style-guide-param';
 import { PluginResult } from './plugin';
+import { Viewport } from './viewport';
 
 export interface ScreenshotResultMetrics {
   layout: number;
@@ -10,6 +11,7 @@ export interface ScreenshotResultMetrics {
 export interface ScreenshotResult {
   url: string;
   plugins: PluginResult<unknown>[];
+  viewport: Viewport;
 }
 
 export interface MetaDataResult {
@@ -25,6 +27,9 @@ export interface MetaDataResult {
 }
 
 export interface Result {
+  browserInfo: {
+    userAgent: string;
+  };
   results: ScreenshotResult[];
   styleGuide: StyleGuideParam[];
 }

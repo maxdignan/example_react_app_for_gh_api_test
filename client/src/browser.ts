@@ -12,18 +12,18 @@ import { Plugin, PluginOptions, PluginResult } from './models/plugin';
 import { StyleGuideBuilder } from './style-guide/style-guide-builder';
 import { StyleGuideParam } from './style-guide/style-guide-param';
 import { AppArgs, getArgFor } from './models/args';
+import { Viewport } from './models/viewport';
+import { logger } from './logger';
 import * as fromPlugins from './plugins';
-import { Logger } from './logger';
 
 export class Browser {
-  static isDebug = process.env.DEBUG ? !!+process.env.DEBUG : false;
-  static viewports = [
+  static viewports: ReadonlyArray<Viewport> = [
     // Desktop
-    { w: 1400, h: 900, mobile: false },
+    { w: 1400, h: 900, mobile: false, id: 1 },
     // Tablet iPad portrait
-    { w: 768, h: 1024, mobile: true },
+    { w: 768, h: 1024, mobile: true, id: 2 },
     // iPhone 11
-    { w: 375, h: 812, mobile: true },
+    { w: 375, h: 812, mobile: true, id: 3 },
   ];
 
   // Can be thought of as dpr of screenshot
@@ -31,12 +31,10 @@ export class Browser {
 
   static enabledPlugins: Plugin<unknown>[] = [
     new fromPlugins.PageScreenShotPlugin(),
-    // new fromPlugins.ComponentScreenShotPlugin(),
+    new fromPlugins.ComponentScreenShotPlugin(),
     new fromPlugins.PageTitlePlugin(),
     // new fromPlugins.MetricsPlugin(),
   ];
-
-  private logger: Logger = new Logger(Browser.isDebug);
 
   /**
    * Gets the application base URL which will be visiting for each route.
@@ -90,11 +88,8 @@ export class Browser {
         },
         config.login!.password,
       );
-      this.logger.info(`Signing in using ${email} and ${password}`);
-      this.logger.debug(
-        'browser : login form filled :',
-        email + ' / ' + password,
-      );
+      logger.info(`Signing in using ${email} and ${password}`);
+      logger.debug('browser : login form filled :', email + ' / ' + password);
       return true;
     } catch (err) {
       // console.error(err);
@@ -116,15 +111,15 @@ export class Browser {
   ): Promise<boolean> {
     const url = `${serverUrl}/${config.getLoginUrl()}`;
 
-    this.logger.info('Redirecting to authorize user...');
-    this.logger.debug('browser : auth :', url);
+    logger.info('Redirecting to authorize user...');
+    logger.debug('browser : auth :', url);
 
     // Navigate to page.
     try {
       await page.goto(url, { waitUntil: ['load'] });
     } catch (err) {
-      this.logger.error(`An error occurred while loading ${url}`);
-      this.logger.error(err);
+      logger.error(`An error occurred while loading ${url}`);
+      logger.error(err);
       return false;
     }
 
@@ -137,8 +132,8 @@ export class Browser {
     const loginButton = await page.$x("//button[contains(., 'Login')]");
 
     if (loginButton.length > 0) {
-      this.logger.info('Attempting to authorize using credentials...');
-      this.logger.debug('browser : auth : clicking login button...');
+      logger.info('Attempting to authorize using credentials...');
+      logger.debug('browser : auth : clicking login button...');
       try {
         await loginButton[0].click();
       } catch (err) {
@@ -160,8 +155,8 @@ export class Browser {
       console.error(err);
     }
 
-    this.logger.info('User authenticated. Continuing...');
-    this.logger.debug('browser : authorized');
+    logger.info('User authenticated. Continuing...');
+    logger.debug('browser : authorized');
     this.authorized = true;
 
     return true;
@@ -181,8 +176,8 @@ export class Browser {
 
     const url = route.getFullUrl(serverUrl, config);
 
-    this.logger.info(`Processing ${url}`);
-    this.logger.debug(`browser : visit : ${url}`);
+    logger.info(`Processing ${url}`);
+    logger.debug(`browser : visit : ${url}`);
 
     // Navigate to the route.
     await page.goto(url, { waitUntil: ['load'] });
@@ -212,8 +207,8 @@ export class Browser {
       : Browser.viewports;
 
     for (const viewport of viewports) {
-      this.logger.startAction(`  Rendering at ${viewport.w}x${viewport.h}`);
-      this.logger.debug('browser : visit route : viewport', viewport);
+      logger.startAction(`  Rendering at ${viewport.w}x${viewport.h}`);
+      logger.debug('browser : visit route : viewport', viewport);
 
       // Set viewport dimensions
       await page.setViewport({
@@ -238,10 +233,10 @@ export class Browser {
         exitWithError(err);
       }
 
-      this.logger.endAction('done');
-      this.logger.debug('browser : visit route : completed');
+      logger.endAction('done');
+      logger.debug('browser : visit route : completed');
 
-      screenShotResults.push({ url, plugins });
+      screenShotResults.push({ url, plugins, viewport });
     }
 
     return screenShotResults;
@@ -257,6 +252,7 @@ export class Browser {
     config: ProjectConfig,
   ): Promise<Result> {
     const browser = await puppeteer.launch(this.launchConfig);
+    const userAgent = await browser.userAgent();
 
     // Limit max amount of shots
     if (config.limit) {
@@ -272,9 +268,9 @@ export class Browser {
 
     // Some route needs to auth, lets auth first then go take shots.
     const willAuth = routes.some(r => config.willAuthorizeURL(r.url));
-    this.logger.debug('browser : will auth :', willAuth);
+    logger.debug('browser : will auth :', willAuth);
     if (willAuth)
-      this.logger.info(`Found at least one route requires user authentication`);
+      logger.info(`Found at least one route requires user authentication`);
 
     if (!this.authorized && willAuth) {
       // Hit the login route first to capture unauthorized/login view.
@@ -346,9 +342,9 @@ export class Browser {
     }
 
     await browser.close();
-    // console.log('browser : closed');
 
-    return { results, styleGuide };
+    const browserInfo = { userAgent };
+    return { results, styleGuide, browserInfo };
   }
 
   /**
@@ -366,7 +362,7 @@ export class Browser {
     const pluginResults = await Promise.all(
       plugins.map(plugin => plugin.run(page, options)),
     );
-    this.logger.debug('plugin : results :', pluginResults);
+    logger.debug('plugin : results :', pluginResults);
     return pluginResults;
   }
 

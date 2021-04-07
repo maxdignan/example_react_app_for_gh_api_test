@@ -4,16 +4,14 @@ const glob = require('glob');
 import { ParserConfig, Framework, FileExtension } from './models/parser';
 import { Route } from './models/route';
 import { exitWithError, uniqueArrayBy } from './util';
-import { Logger } from './logger';
+import { logger } from './logger';
 
 /**
  * Sniffs a project directory to compile a list of URLs to hit.
  */
 export class URLParser {
-  static isDebug = process.env.DEBUG ? !!+process.env.DEBUG : false;
   private framework: Framework;
   private extension: FileExtension;
-  private logger: Logger = new Logger(URLParser.isDebug);
 
   constructor(config: ParserConfig = {} as ParserConfig) {
     this.framework = config.framework;
@@ -77,8 +75,8 @@ export class URLParser {
     }
 
     let flatRoutes = uniqueArrayBy('url', routes.flat());
-    this.logger.debug('url parser : routes :', flatRoutes);
-    this.logger.info(
+    logger.debug('url parser : routes :', flatRoutes);
+    logger.info(
       `Found ${flatRoutes.length} route${flatRoutes.length > 1 ? 's' : ''}`,
     );
 
@@ -150,8 +148,8 @@ export class URLParser {
       // const pathBlocks: string[] = block.match(/path:\s.+/gi)!;
       const pathBlocks = block.match(/path:\s.+?(?=,)./gi);
       if (pathBlocks === null) {
-        this.logger.error('Could not find any routes');
-        this.logger.debug('url parser : could not find path block :', block);
+        logger.error('Could not find any routes');
+        logger.debug('url parser : could not find path block :', block);
         continue;
       }
       const paths = pathBlocks.map(b => b.replace(/\'|\"|path:\s|,/g, ''));

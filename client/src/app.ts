@@ -10,7 +10,7 @@ import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
 import { AppArgs, getArgFor } from './models/args';
 import { Result } from './models/screenshot-result';
-import { ParserConfig } from './models/parser';
+import { Framework, ParserConfig } from './models/parser';
 import { Browser } from './browser';
 import { URLParser } from './url-parser';
 import { FrameworkParser } from './framework-parser';
@@ -21,29 +21,32 @@ import { Organization } from './models/organization';
 import { User } from './models/user';
 import { GitInfo } from './models/git-info';
 import { RunThrough } from './models/run-through';
-import { PageCapture } from './models/page-capture';
-import { PluginResult } from './models/plugin';
 import {
+  PageCapture,
+  PageCaptureAPIParams,
+  PageCaptureType,
+} from './models/page-capture';
+import { PluginResult } from './models/plugin';
+import { logger } from './logger';
+import {
+  ComponentScreenShotPlugin,
   PageScreenShotPlugin,
   PageScreenshotPluginResult,
   PageTitlePlugin,
 } from './plugins';
-import { Logger } from './logger';
 
 console.time('run');
 
 class App {
   static isDryRun = process.env.DRY_RUN ? !!+process.env.DRY_RUN : false;
-  static isDebug = process.env.DEBUG ? !!+process.env.DEBUG : false;
   private projectConfig: ProjectConfig;
   private httpClient = new HttpClient();
-  private logger: Logger = new Logger(App.isDebug);
 
   constructor(private args: Partial<AppArgs>) {
     this.validateArgs(args);
-    this.logger.welcome(args);
-    if (App.isDryRun) this.logger.dryRunWarning();
-    this.logger.debug('app : args :', args);
+    logger.welcome(args);
+    if (App.isDryRun) logger.dryRunWarning();
+    logger.debug('app : args :', args);
   }
 
   private validateArgs(args: Partial<AppArgs>) {
@@ -64,10 +67,10 @@ class App {
     try {
       const fileContent = require(file);
       config = ProjectConfig.fromFile(fileContent);
-      // this.logger.debug('app : loaded project config :', config);
+      // logger.debug('app : loaded project config :', config);
     } catch (err) {
       config = ProjectConfig.createBlank();
-      // this.logger.debug(`app : no project config at ${file}`);
+      // logger.debug(`app : no project config at ${file}`);
     }
     return config;
   }
@@ -99,8 +102,7 @@ class App {
       framework,
       extension,
     };
-    // this.logger.debug('app : parser framework :', Framework[framework]);
-    // this.logger.debug('app : parser extension :', extension);
+    logger.debug('app : parser :', Framework[framework], extension);
     return parserConfig;
   }
 
@@ -115,19 +117,19 @@ class App {
     let userToken = await UserToken.readUserFromFS(appDir);
 
     if (!userToken) {
-      this.logger.info('No auth found. Starting new session...');
-      this.logger.debug('auth : no user token, creating one...');
+      logger.info('No auth found. Starting new session...');
+      logger.debug('auth : no user token, creating one...');
       // User token is not cached on fs, create one...
       sessionToken = await this.httpClient.generateSessionToken();
-      this.logger.info('Session started. Redirecting to Emtrey login...');
-      this.logger.debug('auth : got session token :', sessionToken);
+      logger.info('Session started. Redirecting to Emtrey login...');
+      logger.debug('auth : got session token :', sessionToken);
 
       // Cache token for API interaction
       this.httpClient.setToken(sessionToken);
 
       // Then let user login manually via web app
       const user = await this.authorizeUser(sessionToken);
-      this.logger.debug('auth : authorized user :', user);
+      logger.debug('auth : authorized user :', user);
 
       let organizationId: number;
       let projectId: number;
@@ -138,7 +140,7 @@ class App {
 
       // Need to create org and projects before we continue
       if (!hasOrganization && !hasProjects) {
-        this.logger.debug('auth : no organization, no projects');
+        logger.debug('auth : no organization, no projects');
         // Create users' first organization
         const organization = await this.httpClient.createOrganization({
           name: `${user.first_name} Organization`,
@@ -175,15 +177,15 @@ class App {
               github_url: null,
               org_id: organizationForProject!.id,
             });
-            this.logger.info(`Created new Emtrey project "${appName}"`);
+            logger.info(`Created new Emtrey project "${appName}"`);
             project = newProject;
           } catch (err) {
             exitWithError(`Error while creating new project ${appName}`);
           }
         }
 
-        this.logger.info('Found existing project, linking now...');
-        this.logger.debug('auth : using project :', project);
+        logger.info('Found existing project, linking now...');
+        logger.debug('auth : using project :', project);
         organizationId = project!.org_id;
         projectId = project!.id;
       } else if (!hasOrganization && hasProjects) {
@@ -200,9 +202,9 @@ class App {
         exitWithError('Could not find organization for user');
       }
 
-      this.logger.info(`Connected to Emtrey project`);
+      logger.info(`Connected to Emtrey project`);
 
-      this.logger.debug(
+      logger.debug(
         'auth : organization and project :',
         organizationId!,
         projectId!,
@@ -216,12 +218,12 @@ class App {
         projectId!,
         organizationId!,
       );
-      this.logger.info('Caching auth token');
-      this.logger.debug('auth : user token saved');
+      logger.info('Caching auth token');
+      logger.debug('auth : user token saved');
     } else {
       // Use token from user file
-      this.logger.info('Still signed into Emtrey. Using saved credentials...');
-      this.logger.debug('auth : got cached user :', userToken);
+      logger.info('Still signed into Emtrey. Using saved credentials...');
+      logger.debug('auth : got cached user :', userToken);
       const { token, projectId, organizationId } = userToken!;
       if (!token || !projectId || !organizationId) {
         exitWithError('Invalid user token');
@@ -316,7 +318,7 @@ class App {
     const path = await this.prepareScreenshotDirectory(appDir);
 
     // Browse to routes and execute plugins
-    this.logger.info('Processing discovering routes...');
+    logger.info('Processing discovering routes...');
     const results = await new Browser().visitRoutes(
       routes,
       appURL,
@@ -348,7 +350,7 @@ class App {
     return new Promise((resolve, reject) => {
       const path = join(dir, this.projectConfig.outputDirectory);
       if (!existsSync(path)) {
-        this.logger.debug('app : creating screenshot directory :', path);
+        logger.debug('app : creating screenshot directory :', path);
         try {
           mkdirSync(path);
         } catch (err) {
@@ -422,16 +424,16 @@ class App {
     return new Promise(resolve => {
       let authTries = 1;
       let user: User | null;
-      this.logger.startAction('Waiting for authentication...');
+      logger.startAction('Waiting for authentication...');
       const getUserInterval = setInterval(async () => {
-        this.logger.debug(`auth : checking (${authTries}) ...`);
-        this.logger.updateAction('...');
+        logger.debug(`auth : checking (${authTries}) ...`);
+        logger.updateAction('...');
         try {
           user = await this.httpClient.getUser();
           if (user) {
             resolve(user);
             clearInterval(getUserInterval);
-            this.logger.endAction('success!');
+            logger.endAction('success!');
           }
         } catch (err) {
           console.log('auth : ', err);
@@ -453,10 +455,11 @@ class App {
     token: UserToken,
   ): Promise<void> {
     if (App.isDryRun) {
+      logger.debug('app : results');
       for (const result of resultData.results) {
-        this.logger.debug('\napp : result :', result, '\n');
+        logger.debug(result);
       }
-      // console.log('\ncstyle guide', resultData.styleGuide);
+      // console.log('style guide', resultData.styleGuide);
       return;
     }
 
@@ -466,17 +469,13 @@ class App {
       const [branch, commit] = await this.getGitInfo();
       const runThroughParams = {
         // API would error when branch not set to master
-        // branch: 'master',
         branch,
         commit,
         project_id: token.projectId,
       };
       runThroughResult = await this.httpClient.postRunThrough(runThroughParams);
-      this.logger.debug(
-        'app : results : submitted run through :',
-        runThroughResult,
-      );
-      this.logger.info(
+      logger.debug('app : results : submitted run through :', runThroughResult);
+      logger.info(
         `Submitting a new run-through for commit ${runThroughResult.commit}...`,
       );
     } catch (err) {
@@ -487,36 +486,39 @@ class App {
     // loop through results and post each to API
 
     for (const result of resultData.results) {
-      // console.log('\n\n', 'app : result :', result, '\n\n');
+      // Get result type
+      const componentPlugin = result.plugins.find(
+        p => p.pluginId === ComponentScreenShotPlugin.id,
+      ) as PluginResult<any>;
+      const type: PageCaptureType =
+        componentPlugin?.data?.length > 0 ? 'component' : 'page';
 
-      const { data } = result.plugins.find(
+      // Get page title from plugin group
+      const { data: page_title } = result.plugins.find(
         p => p.pluginId === PageTitlePlugin.id,
       ) as PluginResult<string>;
 
-      const pageCaptureParams = {
+      const pageCaptureParams: PageCaptureAPIParams = {
         page_route: result.url,
-        page_title: "Page title", // Required by have content by API - this needs changed
-        browser: "chrome", // Required by have content by API
-        type: "page", // Required by have content by API
-        user_agent: "Gecko", // Required by have content by API
-        name: "Component title", // Required by have content by API - Should be component name in the future
-        screen_resolution_id: 1, // Required by have content by API - Needs to be tracked in the results data
+        page_title,
+        browser: 'chrome',
+        type,
+        user_agent: resultData.browserInfo.userAgent, // Required by have content by API
+        name: 'Component title', // Required by have content by API - Should be component name in the future
+        screen_resolution_id: result.viewport.id, // Required by have content by API - Needs to be tracked in the results data
         run_through_id: runThroughResult!.id,
       };
 
-      // console.log('app : results : page capture params :', pageCaptureParams);
+      console.log('app : results : page capture params :', pageCaptureParams);
 
       let pageCapture: PageCapture;
 
       try {
-        this.logger.startAction(
+        logger.startAction(
           `Uploading captures for ${pageCaptureParams.page_route}`,
         );
         pageCapture = await this.httpClient.postPageCapture(pageCaptureParams);
-        this.logger.debug(
-          'app : results : submitted page capture :',
-          pageCapture,
-        );
+        logger.debug('app : results : submitted page capture :', pageCapture);
         const { data } = result.plugins.find(
           p => p.pluginId === PageScreenShotPlugin.id,
         ) as PluginResult<PageScreenshotPluginResult>;
@@ -526,25 +528,25 @@ class App {
         }
 
         await this.httpClient.postScreenshotToS3(data.path, pageCapture);
-        this.logger.debug('app : results : submitted to s3');
+        logger.debug('app : results : submitted to s3');
 
         await this.httpClient.startDiff(pageCapture);
-        this.logger.debug(
+        logger.debug(
           'app : results : started diff :',
           pageCapture.page_capture.s3_object_key,
         );
-        this.logger.endAction('done');
+        logger.endAction('done');
       } catch (err) {
         exitWithError(err);
       }
 
       try {
-        this.logger.startAction('Uploading found styles to Emtrey...');
+        logger.startAction('Uploading found styles to Emtrey...');
         await this.httpClient.postStyleGuide(
           token.projectId,
           resultData.styleGuide,
         );
-        this.logger.endAction('done');
+        logger.endAction('done');
       } catch (err) {
         console.log('app : error submitting style guide :', err);
       }
@@ -559,11 +561,9 @@ class App {
    * Output link to view project in web app.
    */
   private logLinkForRunThrough(projectId: number, runThroughId: number) {
-    this.logger.notice(
-      'Emtrey run through completed. To view the results visit:',
-    );
+    logger.notice('Emtrey run through completed. To view the results visit:');
     const url = `https://${HttpClient.apiURL}/projects/${projectId}/runs/${runThroughId}`;
-    this.logger.notice(url);
+    logger.notice(url);
   }
 }
 
