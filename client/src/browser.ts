@@ -384,7 +384,7 @@ export class Browser {
 
     try {
       buttonClasses = await allPropsForElement(params.page, 'button');
-      colors = await StyleGuideBuilder.getAllColorsInStyleSheets(params.page);
+      colors = await StyleGuideBuilder.collectColorsFromPage(params.page);
     } catch (err) {
       console.log('collect meta data : error :', err);
     }
