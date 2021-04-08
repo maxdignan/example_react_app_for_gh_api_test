@@ -1,3 +1,5 @@
+// This module is injected into the page instance to evaluate components
+export default `
 /**
  * Proof of concept to find weighted components.
  * @returns string[];
@@ -24,7 +26,7 @@ window.$plugin = () => {
   };
 
   // Generates a unique key that includes the element tag and class
-  var getElementKey = element => `${element.tagName}::${xpath(element)}`;
+  var getElementKey = element => element.tagName + '::' + xpath(element);
 
   // Get all eligible elements.
   var elements = Array.from(
@@ -61,7 +63,7 @@ window.$plugin = () => {
     .map(k => ({ count: counts[k], cls: k }))
     .sort((a, b) => (a.count > b.count ? -1 : 1));
 
-  // To test `highestWeightedElements` array.
+  // To test "highestWeightedElements" array.
   // return highestWeightedElements.slice(0, 4).map(res => res.cls);
 
   // Only want items that repeat more than once.
@@ -103,3 +105,4 @@ window.$plugin = () => {
 
   return pluginResults;
 };
+`;

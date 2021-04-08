@@ -3,21 +3,16 @@ import { request, RequestOptions } from 'https';
 
 import { Project, CreateProjectAPIParams } from './models/project';
 import { RunThrough } from './models/run-through';
-import { PageCapture } from './models/page-capture';
+import { PageCapture, PageCaptureAPIParams } from './models/page-capture';
 import { User } from './models/user';
 import { exitWithError } from './util';
 import { StyleGuideParam } from './style-guide/style-guide-param';
 import { Organization } from './models/organization';
-import { Logger } from './logger';
+import { logger } from './logger';
 
 export class HttpClient {
-  static isDebug = process.env.DEBUG ? !!+process.env.DEBUG : false;
-
   /** Location of API. */
-  // static apiURL = 'app-qa.emtrey.io';
-  static apiURL = 'app-dev.emtrey.io';
-
-  static logger: Logger = new Logger(HttpClient.isDebug);
+  static apiURL = process.env.API_URL || 'app.emtrey.io';
 
   static request<T>(
     method: 'GET' | 'POST' = 'GET',
@@ -33,7 +28,7 @@ export class HttpClient {
     const headers = token ? { api_session_token: token } : null;
 
     if (!token) {
-      HttpClient.logger.debug('\n\nhttp : no token supplied\n\n');
+      logger.debug('\n\nhttp : no token supplied\n\n');
     }
 
     const options = {
@@ -49,7 +44,7 @@ export class HttpClient {
       const req = request(options, res => {
         // 500's and 400's should reject, everything else passes
         const statusCode = res.statusCode?.toString();
-        HttpClient.logger.debug('http : status :', statusCode);
+        logger.debug('http : status :', statusCode);
         if (statusCode?.startsWith('5') || statusCode?.startsWith('4')) {
           const message = `http : bad response for url : ${options.path}, status : ${res.statusMessage}`;
           reject(message);
@@ -68,10 +63,7 @@ export class HttpClient {
               data = JSON.parse(body.toString());
             }
           } catch (err) {
-            HttpClient.logger.debug(
-              'http : error parsing data as json :',
-              data!,
-            );
+            logger.debug('http : error parsing data as json :', data!);
             resolve(data!);
           }
           resolve(data!);
@@ -91,6 +83,10 @@ export class HttpClient {
 
   public token: string;
 
+  constructor() {
+    logger.debug('http : using api :', HttpClient.apiURL);
+  }
+
   public setToken(token: string) {
     // Hardcoded to test style guide api
     // this.token = 'guvyxLiw0O1GeCpvk8FwRq92DEAZhQSmEso3z68-zykC2MgvRZK-BizBGsE9';
@@ -102,7 +98,7 @@ export class HttpClient {
   }
 
   public post<T>(url: string, params: { [key: string]: any }): Promise<T> {
-    HttpClient.logger.debug('http : post :', url, this.token);
+    logger.debug('http : post :', url, this.token);
     return HttpClient.request(
       'POST',
       HttpClient.apiURL,
@@ -192,11 +188,9 @@ export class HttpClient {
       -d "page_route=/hellopage&page_title=HelloPage&run_through_id=48" \
       -X POST https://app-dev.emtrey.io/api/page-capture
    */
-  public async postPageCapture(params: {
-    page_route: string;
-    page_title: string;
-    run_through_id: number;
-  }): Promise<PageCapture> {
+  public async postPageCapture(
+    params: PageCaptureAPIParams,
+  ): Promise<PageCapture> {
     return this.post<PageCapture>('api/page-capture', params);
   }
 
@@ -219,9 +213,9 @@ export class HttpClient {
       };
 
       const req = request(options, res => {
-        HttpClient.logger.debug(`STATUS: ${res.statusCode}`);
-        HttpClient.logger.debug(`HEADERS: ${JSON.stringify(res.headers)}`);
-        res.on('data', chunk => HttpClient.logger.debug(`BODY: ${chunk}`));
+        logger.debug(`STATUS: ${res.statusCode}`);
+        logger.debug(`HEADERS: ${JSON.stringify(res.headers)}`);
+        res.on('data', chunk => logger.debug(`BODY: ${chunk}`));
         res.on('end', () => resolve());
       });
 
