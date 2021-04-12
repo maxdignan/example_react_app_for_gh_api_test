@@ -34,6 +34,7 @@ import {
   PageScreenshotPluginResult,
   PageTitlePlugin,
 } from './plugins';
+import { StyleGuideTemplateId } from './style-guide/style-guide-templates';
 
 console.time('run');
 
@@ -459,7 +460,12 @@ class App {
       for (const result of resultData.results) {
         logger.debug(result);
       }
-      // console.log('style guide', resultData.styleGuide);
+      console.log(
+        'style guide colors',
+        resultData.styleGuide.filter(
+          sg => sg.id === StyleGuideTemplateId.color,
+        ),
+      );
       return;
     }
 
