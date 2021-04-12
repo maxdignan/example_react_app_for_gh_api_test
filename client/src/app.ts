@@ -255,10 +255,17 @@ class App {
    * Get app directory from arguments, or fallback to current working directory.
    */
   private getAppDirectory(homeId = '~'): string {
-    const arg = getArgFor(this.args, 'dir');
-    if (arg) {
-      const hasHomeId = arg.indexOf(homeId) > -1;
-      const dir = hasHomeId ? arg.replace(homeId, homedir()) : arg;
+    const dir = getArgFor(this.args, 'dir');
+    if (dir) {
+      const hasHomeId = dir.indexOf(homeId) > -1;
+      if (hasHomeId) {
+        return dir.replace(homeId, homedir());
+      }
+      const hasRelativity = dir.indexOf('./');
+      if (hasRelativity) {
+        const parts = dir.split('/');
+        return join(...parts);
+      }
       return dir;
     }
     return process.cwd();
@@ -280,7 +287,6 @@ class App {
           appName = JSON.parse(json).name;
         } catch (err) {
           reject(err);
-          process.exit();
         }
         resolve(appName! || 'my_emtrey_project');
       });
