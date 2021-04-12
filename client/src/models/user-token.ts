@@ -1,17 +1,19 @@
 import * as fs from 'fs';
 import { join } from 'path';
+import { inspect } from 'util';
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 
 import { exitWithError } from '../util';
 import { logger } from '../logger';
 import { User } from './user';
+import { Project } from './project';
 
 export interface UserTokenInterface {
   token: string;
   email?: string;
   first_name: string;
   organizationId: number;
-  projectId: number;
+  project: Project;
 }
 
 export class UserToken implements UserTokenInterface {
@@ -24,7 +26,7 @@ export class UserToken implements UserTokenInterface {
   readonly email?: string;
   readonly first_name: string;
   readonly organizationId: number;
-  readonly projectId: number;
+  readonly project: Project;
 
   /**
    * Instantiate user token from string.
@@ -81,14 +83,14 @@ export class UserToken implements UserTokenInterface {
     dir: string,
     user: User,
     sessionToken: string,
-    projectId: number,
+    project: Project,
     organizationId: number,
   ): Promise<UserToken> {
     const token: UserTokenInterface = {
       email: user.email,
       first_name: user.first_name || 'Anon',
       token: sessionToken,
-      projectId,
+      project,
       organizationId,
     };
     logger.debug('user token : saving');
@@ -118,6 +120,7 @@ export class UserToken implements UserTokenInterface {
       logger.debug('user token : reading from file :', fileName);
       const fileContent = await fs.promises.readFile(fileName, 'utf-8');
       token = UserToken.fromJSON(UserToken.decrypt(JSON.parse(fileContent)));
+      logger.info('user token : content :', inspect(token, true, 3));
     } catch (err) {
       // Assume error is ENOENT (no entity)
       logger.debug('user token : error :', err);
@@ -137,7 +140,7 @@ export class UserToken implements UserTokenInterface {
     this.token = data.token;
     this.email = data.email;
     this.organizationId = data.organizationId;
-    this.projectId = data.projectId;
+    this.project = data.project;
     this.first_name = data.first_name;
   }
 }

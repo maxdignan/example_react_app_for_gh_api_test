@@ -15,17 +15,9 @@ import { AppArgs, getArgFor } from './models/args';
 import { Viewport } from './models/viewport';
 import { logger } from './logger';
 import * as fromPlugins from './plugins';
+import { Project } from './models/project';
 
 export class Browser {
-  static viewports: ReadonlyArray<Viewport> = [
-    // Desktop
-    { w: 1400, h: 900, mobile: false, id: 1 },
-    // Tablet iPad portrait
-    { w: 768, h: 1024, mobile: true, id: 2 },
-    // iPhone 11
-    { w: 375, h: 812, mobile: true, id: 3 },
-  ];
-
   // Can be thought of as dpr of screenshot
   static deviceScaleFactor = 1;
 
@@ -171,8 +163,9 @@ export class Browser {
     config: ProjectConfig;
     path: string;
     page: puppeteer.Page;
+    projectViewports: ReadonlyArray<Viewport>;
   }): Promise<ScreenshotResult[]> {
-    const { route, serverUrl, config, path, page } = data;
+    const { route, serverUrl, config, path, page, projectViewports } = data;
 
     const url = route.getFullUrl(serverUrl, config);
 
@@ -203,18 +196,18 @@ export class Browser {
     let screenShotResults: ScreenshotResult[] = [];
 
     const viewports = process.env.LIMIT_VIEWPORT
-      ? Browser.viewports.slice(0, 1)
-      : Browser.viewports;
+      ? projectViewports.slice(0, 1)
+      : projectViewports;
 
     for (const viewport of viewports) {
-      logger.startAction(`  Rendering at ${viewport.w}x${viewport.h}`);
+      logger.startAction(`  Rendering at ${viewport.x}x${viewport.y}`);
       logger.debug('browser : visit route : viewport', viewport);
 
       // Set viewport dimensions
       await page.setViewport({
-        width: viewport.w,
-        height: viewport.h,
-        isMobile: viewport.mobile,
+        width: viewport.x,
+        height: viewport.y,
+        // isMobile: viewport.mobile,
         deviceScaleFactor: Browser.deviceScaleFactor,
       });
 
@@ -250,6 +243,7 @@ export class Browser {
     serverUrl: string,
     path: string,
     config: ProjectConfig,
+    projectViewports: ReadonlyArray<Viewport>,
   ): Promise<Result> {
     const browser = await puppeteer.launch(this.launchConfig);
     const userAgent = await browser.userAgent();
@@ -285,6 +279,7 @@ export class Browser {
           config,
           path,
           page,
+          projectViewports,
         });
         results.push(...loginResult);
         hasVisitedLogin = true;
@@ -319,6 +314,7 @@ export class Browser {
         config,
         path,
         page,
+        projectViewports,
       };
 
       results.push(...(await this.visitRoute(params)));

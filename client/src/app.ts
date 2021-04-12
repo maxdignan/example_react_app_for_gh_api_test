@@ -27,14 +27,15 @@ import {
   PageCaptureType,
 } from './models/page-capture';
 import { PluginResult } from './models/plugin';
+import { Project } from './models/project';
 import { logger } from './logger';
+import { StyleGuideTemplateId } from './style-guide/style-guide-templates';
 import {
   ComponentScreenShotPlugin,
   PageScreenShotPlugin,
   PageScreenshotPluginResult,
   PageTitlePlugin,
 } from './plugins';
-import { StyleGuideTemplateId } from './style-guide/style-guide-templates';
 
 console.time('run');
 
@@ -133,7 +134,7 @@ class App {
       logger.debug('auth : authorized user :', user);
 
       let organizationId: number;
-      let projectId: number;
+      let project: Project;
 
       const hasOrganization = user.orgs.length > 0;
       const hasProjects = user.projects.length > 0;
@@ -148,19 +149,18 @@ class App {
         });
         organizationId = organization.id;
         // Create users' first project
-        const project = await this.httpClient.createProject({
+        project = await this.httpClient.createProject({
           name: appName,
           github_url: null,
           org_id: organizationId,
         });
-        projectId = project.id;
       } else if (
         (hasOrganization && hasProjects) ||
         (hasOrganization && !hasProjects)
       ) {
         // Take the org from the project
-        let project = user.projects.find(p => p.name === appName);
-        if (!project) {
+        let userProject = user.projects.find(p => p.name === appName);
+        if (!userProject) {
           let organizationForProject: Organization;
           if (user.orgs.length > 1) {
             const {
@@ -183,22 +183,23 @@ class App {
           } catch (err) {
             exitWithError(`Error while creating new project ${appName}`);
           }
+        } else {
+          project = userProject;
         }
 
         logger.info('Found existing project, linking now...');
-        logger.debug('auth : using project :', project);
+        logger.debug('auth : using project :', project!);
         organizationId = project!.org_id;
-        projectId = project!.id;
       } else if (!hasOrganization && hasProjects) {
         // No organizations, but projects exist
-        const project = user.projects.find(p => p.name === appName);
-        if (!project) {
+        const userProject = user.projects.find(p => p.name === appName);
+        if (!userProject) {
           exitWithError(
             'Could not find matching project to derive organization',
           );
         }
         organizationId = project!.org_id;
-        projectId = project!.id;
+        project = userProject!;
       } else {
         exitWithError('Could not find organization for user');
       }
@@ -208,7 +209,7 @@ class App {
       logger.debug(
         'auth : organization and project :',
         organizationId!,
-        projectId!,
+        project!,
       );
 
       // Save user token for future runs
@@ -216,7 +217,7 @@ class App {
         appDir,
         user,
         sessionToken,
-        projectId!,
+        project!,
         organizationId!,
       );
       logger.info('Caching auth token');
@@ -225,8 +226,8 @@ class App {
       // Use token from user file
       logger.info('Still signed into Emtrey. Using saved credentials...');
       logger.debug('auth : got cached user :', userToken);
-      const { token, projectId, organizationId } = userToken!;
-      if (!token || !projectId || !organizationId) {
+      const { token, project, organizationId } = userToken!;
+      if (!token || !project || !organizationId) {
         exitWithError('Invalid user token');
       }
 
@@ -325,6 +326,7 @@ class App {
       appURL,
       path,
       projectConfig,
+      token!.project.screen_resolutions,
     );
 
     // Send data to API
@@ -432,9 +434,9 @@ class App {
         try {
           user = await this.httpClient.getUser();
           if (user) {
-            resolve(user);
             clearInterval(getUserInterval);
             logger.endAction('success!');
+            resolve(user!);
           }
         } catch (err) {
           console.log('auth : ', err);
@@ -477,7 +479,7 @@ class App {
         // API would error when branch not set to master
         branch,
         commit,
-        project_id: token.projectId,
+        project_id: token.project.id,
       };
       runThroughResult = await this.httpClient.postRunThrough(runThroughParams);
       logger.debug('app : results : submitted run through :', runThroughResult);
@@ -549,7 +551,7 @@ class App {
       try {
         logger.startAction('Uploading found styles to Emtrey...');
         await this.httpClient.postStyleGuide(
-          token.projectId,
+          token.project.id,
           resultData.styleGuide,
         );
         logger.endAction('done');
@@ -558,7 +560,7 @@ class App {
       }
     }
 
-    this.logLinkForRunThrough(token.projectId, runThroughResult!.id);
+    this.logLinkForRunThrough(token.project.id, runThroughResult!.id);
 
     return;
   }
