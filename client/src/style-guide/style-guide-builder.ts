@@ -18,38 +18,42 @@ export class StyleGuideBuilder {
   private pathToSaveImage: string;
 
   /**
-   * Extract commonly-used colors on given page via document's stylesheets.
+   * Extract commonly-used colors on given page via all DOM elements.
    */
-  static getAllColorsInStyleSheets = async (
+  static collectColorsFromPage = async (
     page: puppeteer.Page,
   ): Promise<string[]> => {
-    const colors = await page.evaluate(() =>
-      Array.from(document.styleSheets)
-        // Only ones that belong to this domain
-        // This is to avoid the DOM Exception: Failed to read the 'cssRules' property from 'CSSStyleSheet':
-        .filter(
-          styleSheet =>
-            !styleSheet.href ||
-            styleSheet.href.startsWith(window.location.origin),
-        )
-        // Get all background and foreground colors from all elements
-        .flatMap(s =>
-          Array.from(s.rules)
-            .filter(r => r instanceof CSSStyleRule)
-            .map((r: CSSStyleRule) => r.style.backgroundColor || r.style.color),
-        )
-        // Don't care for non-color values
+    const colors = await page.evaluate(() => {
+      // @ts-ignore
+      var convertRGBAToRGB = rgba => {
+        let rgb = rgba.replace('rgba', 'rgb');
+        rgb = `${rgb.substring(0, rgb.lastIndexOf(','))})`;
+        return rgb;
+      };
+
+      const colorMap = Array.from(document.querySelectorAll('body *'))
+        .flatMap(el => {
+          const style = getComputedStyle(el);
+          const colors = [style.color, style.backgroundColor].map(c => {
+            if (c.indexOf('rgba') > -1) {
+              return convertRGBAToRGB(c);
+            } else {
+              return c;
+            }
+          });
+          return colors;
+        })
         .filter(c => !!c && c !== 'inherit' && c !== 'transparent')
-        // Strip out inlined `--var` values
-        // Example:
-        // rgba(255, 183, 0, var(--bg-opacity)) -> rgba(255, 183, 0)
-        .map(c => c.replace(/,.var?.+(?=\))/, ''))
-        // Only unique values
-        .filter(
-          (value: string, index: number, self: string[]) =>
-            self.indexOf(value) === index,
-        ),
-    );
+        .reduce((a, b) => (a[b] ? a[b]++ : (a[b] = 1)) && a, {});
+
+      const colorList = Object.keys(colorMap).sort((a, b) =>
+        colorMap[a] > colorMap[b] ? -1 : 1,
+      );
+
+      return colorList;
+    });
+
+    console.log('style guide builder : got colors :', colors);
 
     return colors;
   };
@@ -89,10 +93,11 @@ export class StyleGuideBuilder {
         {} as { [key: string]: number },
       ) as { [key: string]: number };
 
-    const colors = Object.keys(colorMap)
-      .sort((a, b) => (colorMap[a] > colorMap[b] ? -1 : 1))
-      // Only get the first N colors
-      .slice(0, 10);
+    const colors = Object.keys(colorMap).sort((a, b) =>
+      colorMap[a] > colorMap[b] ? -1 : 1,
+    );
+    // Only get the first N colors
+    // .slice(0, 10);
 
     const analyzed: AnalyzedMetaData = {
       buttonClasses,
