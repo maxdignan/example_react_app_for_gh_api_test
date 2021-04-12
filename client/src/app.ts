@@ -2,7 +2,8 @@
 
 import { existsSync, mkdirSync, readFile } from 'fs';
 import { exec } from 'child_process';
-import { join } from 'path';
+import { homedir } from 'os';
+import { join, relative, resolve } from 'path';
 import { prompt } from 'prompts';
 import * as rimraf from 'rimraf';
 
@@ -254,9 +255,21 @@ class App {
   /**
    * Get app directory from arguments, or fallback to current working directory.
    */
-  private getAppDirectory(): string {
-    const arg = getArgFor(this.args, 'dir');
-    return arg ? arg : process.cwd();
+  private getAppDirectory(homeId = '~'): string {
+    const dir = getArgFor(this.args, 'dir');
+    if (dir) {
+      const hasHomeId = dir.indexOf(homeId) > -1;
+      if (hasHomeId) {
+        return dir.replace(homeId, homedir());
+      }
+      const hasRelativity = dir.indexOf('./');
+      if (hasRelativity) {
+        const parts = dir.split('/');
+        return join(...parts);
+      }
+      return dir;
+    }
+    return process.cwd();
   }
 
   private async getAppName(): Promise<string> {
