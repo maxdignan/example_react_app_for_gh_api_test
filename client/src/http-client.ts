@@ -28,7 +28,7 @@ export class HttpClient {
     const headers = token ? { api_session_token: token } : null;
 
     if (!token) {
-      logger.debug('\n\nhttp : no token supplied\n\n');
+      logger.warn('http : no token supplied');
     }
 
     const options = {
