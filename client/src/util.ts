@@ -5,17 +5,12 @@ import { AppArgs } from './models/args';
 
 /**
  * Turn process arguments into object. Example:
- * node config/build.js -lHRs --ip=$HOST --port=$PORT --env=dev
-output
-{ 
-  l: true,
-  H: true,
-  R: true,
-  s: true,
-  ip: '127.0.0.1',
-  port: '8080',
-  env: 'dev'
-}
+ * node config/build.js --port=$PORT -e=dev
+ * output
+ * {
+ *  port: '8080',
+ *   env: 'dev'
+ * }
  */
 export const getArgs = (): Partial<AppArgs> => {
   const args: { [key: string]: string } = {};

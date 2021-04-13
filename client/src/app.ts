@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFile } from 'fs';
+import { existsSync, mkdirSync, readFile, rmdir } from 'fs';
 import { exec } from 'child_process';
 import { homedir } from 'os';
-import { join, relative, resolve } from 'path';
+import { join } from 'path';
 import { prompt } from 'prompts';
 import * as rimraf from 'rimraf';
 
@@ -391,7 +391,7 @@ class App {
           if (err) {
             return reject(err);
           }
-          // console.log('app : screenshot directory emptied :', path);
+          logger.debug('app : screenshot directory emptied :', path);
           resolve(path);
         });
       }
@@ -404,15 +404,16 @@ class App {
   private async cleanup(dir: string) {
     // Disabled for dev
     return Promise.resolve(null);
-    // return new Promise((resolve, reject) => {
-    //   console.log('app : cleaning up dir :', dir);
-    //   rmdir(dir, { recursive: true }, err => {
-    //     if (err) {
-    //       return reject(err);
-    //     }
-    //     resolve(null);
-    //   });
-    // });
+    return new Promise((resolve, reject) => {
+      logger.debug('app : cleaning up dir :', dir);
+      rmdir(dir, { recursive: true }, err => {
+        if (err) {
+          return reject(err);
+        }
+        logger.debug('app : cleaned');
+        resolve(null);
+      });
+    });
   }
 
   /**

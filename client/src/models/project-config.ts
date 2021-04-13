@@ -22,14 +22,14 @@ export class ProjectConfig {
     ? +process.env.DEFAULT_LIMIT
     : 0;
   /** Where screenshots are saved */
-  static defaultDir = '.emtrey_tmp';
+  static defaultDir = '.emtrey/tmp';
   static defaultLoginUrl = 'login';
 
   /** Local directory where screens will be stored. */
-  outputDirectory: string;
+  public outputDirectory: string;
 
   /** Maximum amount of screens to take. */
-  limit: number;
+  public limit: number;
 
   /**
    * Construct a new project config from file contents.
