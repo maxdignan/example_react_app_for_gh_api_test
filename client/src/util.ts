@@ -77,7 +77,7 @@ export const allPropsForElement = async (
 ): Promise<string[]> => {
   const elements = await page.$$(element);
   const props = await Promise.all(elements.map(el => el.getProperty(prop)));
-  return (await Promise.all(props.map(p => p.jsonValue()))) as string[];
+  return (await Promise.all(props.map(p => p!.jsonValue()))) as string[];
 };
 
 /**
@@ -148,3 +148,10 @@ export const Example = () => {
 };
 
 export const isDebug = () => (process.env.DEBUG ? !!+process.env.DEBUG : false);
+
+/**
+ * Overwrite console warn to hide any 3rd party logging
+ */
+export const patchConsoleWarn = () => {
+  Object.defineProperty(console, 'warn', { value: () => null });
+};

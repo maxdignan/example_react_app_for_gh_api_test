@@ -16,7 +16,13 @@ import { Browser } from './browser';
 import { URLParser } from './url-parser';
 import { FrameworkParser } from './framework-parser';
 import { HttpClient } from './http-client';
-import { exitWithError, getArgs, openBrowserTo, xhrGet } from './util';
+import {
+  exitWithError,
+  getArgs,
+  openBrowserTo,
+  patchConsoleWarn,
+  xhrGet,
+} from './util';
 import { UserToken } from './models/user-token';
 import { Organization } from './models/organization';
 import { User } from './models/user';
@@ -46,6 +52,7 @@ class App {
   private httpClient = new HttpClient();
 
   constructor(private args: Partial<AppArgs>) {
+    patchConsoleWarn();
     this.validateArgs(args);
     logger.welcome(args);
     if (App.isDryRun) logger.dryRunWarning();
