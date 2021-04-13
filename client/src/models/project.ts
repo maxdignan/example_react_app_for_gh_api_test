@@ -1,3 +1,5 @@
+import { Viewport } from './viewport';
+
 /**
  *  curl -H "api_session_token: haDZ3hKdX46sbaeTXVkHzLZ-gfeEp6IoNOqHmdGaXfDa7d0K4jEprWo61-58" \
       -d "name=project2&github_url=foo&org_id=1" \
@@ -15,13 +17,7 @@ export interface Project {
   name: string;
   base_branch_name: string;
   archive_flag: boolean;
-  screen_resolutions: {
-    name: 'Desktop' | 'Tablet' | 'Mobile';
-    x: number;
-    y: number;
-    on: boolean;
-    id: number;
-  }[];
+  screen_resolutions: ReadonlyArray<Viewport>;
 }
 
 export interface CreateProjectAPIParams {
