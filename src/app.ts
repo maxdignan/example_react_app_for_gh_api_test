@@ -467,7 +467,7 @@ class App {
           logger.warn('auth : ', err);
           // reject(err); clearInterval(getUserInterval);
         }
-        if (authTries > 19) {
+        if (authTries > 9) {
           exitWithError('Too many authorization attempts');
         }
         authTries += 1;
