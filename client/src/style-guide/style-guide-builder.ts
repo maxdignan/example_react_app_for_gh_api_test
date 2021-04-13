@@ -4,6 +4,7 @@ import { compile } from 'handlebars';
 
 import { AnalyzedMetaData, MetaDataResult } from '../models/screenshot-result';
 import { getElementClassCounts } from '../util';
+import { logger } from '../logger';
 import { Route } from '../models/route';
 import { ProjectConfig } from '../models/project-config';
 import { StyleGuideParam } from './style-guide-param';
@@ -53,7 +54,7 @@ export class StyleGuideBuilder {
       return colorList;
     });
 
-    console.log('style guide builder : got colors :', colors);
+    logger.debug('style guide builder : got colors :', colors);
 
     return colors;
   };

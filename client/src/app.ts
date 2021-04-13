@@ -229,6 +229,10 @@ class App {
       logger.debug('auth : got cached user :', userToken);
       const { token, project, organizationId } = userToken!;
       if (!token || !project || !organizationId) {
+        logger.info(
+          'Invalid user token detected and removed. Please run the Emtrey command again.',
+        );
+        UserToken.deleteUserFromFS(appDir);
         exitWithError('Invalid user token');
       }
 
