@@ -180,7 +180,7 @@ export class Browser {
       // Check if URL is enbaled
       const enabled = config.getURLProp(route.url, 'enabled');
       if (enabled === false) {
-        console.log('browser : url is disabled :', url);
+        logger.debug('browser : url is disabled :', url);
         // URL is not enabled, skip running all plugins
         return [];
       }
@@ -188,7 +188,7 @@ export class Browser {
       const delay = config.getURLProp(route.url, 'delay');
       // Timeout before executing plugins in MS
       if (delay && !isNaN(delay)) {
-        // console.log(`browser : delay for : ${delay} milliseconds`);
+        // logger.debug(`browser : delay for : ${delay} milliseconds`);
         await page.waitFor(delay);
       }
     }
@@ -250,7 +250,7 @@ export class Browser {
 
     // Limit max amount of shots
     if (config.limit) {
-      console.log(`browser : limiting routes to ${config.limit}`);
+      logger.debug(`browser : limiting routes to ${config.limit}`);
       routes = routes.slice(0, config.limit);
     }
 
@@ -382,7 +382,7 @@ export class Browser {
       buttonClasses = await allPropsForElement(params.page, 'button');
       colors = await StyleGuideBuilder.collectColorsFromPage(params.page);
     } catch (err) {
-      console.log('collect meta data : error :', err);
+      logger.warn('collect meta data : error :', err);
     }
 
     const metaData: MetaDataResult = {

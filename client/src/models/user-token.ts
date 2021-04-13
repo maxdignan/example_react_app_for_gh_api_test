@@ -120,7 +120,7 @@ export class UserToken implements UserTokenInterface {
       logger.debug('user token : reading from file :', fileName);
       const fileContent = await fs.promises.readFile(fileName, 'utf-8');
       token = UserToken.fromJSON(UserToken.decrypt(JSON.parse(fileContent)));
-      logger.info('user token : content :', inspect(token, true, 3));
+      logger.debug('user token : content :', inspect(token, true, 3));
     } catch (err) {
       // Assume error is ENOENT (no entity)
       logger.debug('user token : error :', err);

@@ -456,7 +456,7 @@ class App {
             resolve(user!);
           }
         } catch (err) {
-          console.log('auth : ', err);
+          logger.warn('auth : ', err);
           // reject(err); clearInterval(getUserInterval);
         }
         if (authTries > 19) {
@@ -479,7 +479,7 @@ class App {
       for (const result of resultData.results) {
         logger.debug(result);
       }
-      console.log(
+      logger.debug(
         'style guide colors',
         resultData.styleGuide.filter(
           sg => sg.id === StyleGuideTemplateId.color,
@@ -534,7 +534,7 @@ class App {
         run_through_id: runThroughResult!.id,
       };
 
-      console.log('app : results : page capture params :', pageCaptureParams);
+      logger.debug('app : results : page capture params :', pageCaptureParams);
 
       let pageCapture: PageCapture;
 
@@ -573,7 +573,7 @@ class App {
         );
         logger.endAction('done');
       } catch (err) {
-        console.log('app : error submitting style guide :', err);
+        logger.warn('app : error submitting style guide :', err);
       }
     }
 
