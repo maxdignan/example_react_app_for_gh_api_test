@@ -1,4 +1,5 @@
 import puppeteer, { LaunchOptions } from 'puppeteer';
+import findChrome from 'chrome-finder';
 
 import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
@@ -15,7 +16,6 @@ import { AppArgs, getArgFor } from './models/args';
 import { Viewport } from './models/viewport';
 import { logger } from './logger';
 import * as fromPlugins from './plugins';
-import { Project } from './models/project';
 
 export class Browser {
   // Can be thought of as dpr of screenshot
@@ -40,11 +40,25 @@ export class Browser {
     return url!;
   }
 
+  /**
+   * Where is Chrome installed on users' system?
+   */
+  static getChromeExecutablePath(): string {
+    let path: string;
+    try {
+      path = findChrome();
+    } catch (err) {
+      exitWithError('No Chrome installation found.');
+    }
+    return path!;
+  }
+
   private authorized = false;
   private launchConfig: LaunchOptions = {
     product: 'chrome', // Also firefox
     headless: true,
     slowMo: 0,
+    executablePath: Browser.getChromeExecutablePath(),
   };
 
   /**

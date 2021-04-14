@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "chalk": "^4.1.0",
+    "chrome-finder": "^1.0.7",
     "glob": "^7.1.6",
     "handlebars": "^4.7.6",
     "prompts": "^2.4.1",

@@ -468,7 +468,7 @@ class App {
           // reject(err); clearInterval(getUserInterval);
         }
         if (authTries > 9) {
-          exitWithError('Too many authorization attempts');
+          exitWithError('Auth timeout');
         }
         authTries += 1;
       }, 4000);
