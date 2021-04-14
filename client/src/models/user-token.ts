@@ -17,6 +17,7 @@ export interface UserTokenInterface {
 }
 
 export class UserToken implements UserTokenInterface {
+  /** @todo: This repeats in project config, share it. */
   static emtreyDir = '.emtrey';
   static cryptoSecret = Array.from({ length: 32 }, (_, i) =>
     String.fromCharCode(88 + ++i),
