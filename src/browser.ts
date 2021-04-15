@@ -1,4 +1,4 @@
-import puppeteer, { LaunchOptions } from 'puppeteer';
+import puppeteer, { LaunchOptions } from 'puppeteer-core';
 import findChrome from 'chrome-finder';
 
 import { Route } from './models/route';
@@ -56,8 +56,6 @@ export class Browser {
   private authorized = false;
   private launchConfig: LaunchOptions = {
     product: 'chrome', // Also firefox
-    headless: true,
-    slowMo: 0,
     executablePath: Browser.getChromeExecutablePath(),
   };
 
@@ -80,7 +78,7 @@ export class Browser {
           el.dispatchEvent(new Event('change', options));
           return el.value;
         },
-        config.login!.user,
+        config.login!.user!,
       );
       const password = await page.$eval(
         'input[type="password"]',
@@ -92,7 +90,7 @@ export class Browser {
           el.dispatchEvent(new Event('change', options));
           return el.value;
         },
-        config.login!.password,
+        config.login!.password!,
       );
       logger.info(`Signing in using ${email} and ${password}`);
       logger.debug('browser : login form filled :', email + ' / ' + password);

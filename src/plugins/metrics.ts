@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 
 import { Plugin } from '../models/plugin';
 import { ScreenshotResultMetrics } from '../models/screenshot-result';
@@ -16,9 +16,9 @@ export class MetricsPlugin extends Plugin<ScreenshotResultMetrics> {
    */
   private parseMetrics(metrics: puppeteer.Metrics): ScreenshotResultMetrics {
     return {
-      layout: metrics.LayoutDuration,
-      script: metrics.ScriptDuration,
-      heap: metrics.JSHeapTotalSize,
+      layout: metrics.LayoutDuration!,
+      script: metrics.ScriptDuration!,
+      heap: metrics.JSHeapTotalSize!,
     };
   }
 

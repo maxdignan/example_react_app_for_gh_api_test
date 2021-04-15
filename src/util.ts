@@ -1,5 +1,5 @@
 import http from 'http';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 
 import { AppArgs } from './models/args';
 
