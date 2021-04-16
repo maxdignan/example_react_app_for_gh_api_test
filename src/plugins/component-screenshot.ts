@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import { join } from 'path';
 
 import { exitWithError } from '../util';

@@ -1,5 +1,5 @@
 import { join } from 'path';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import { compile } from 'handlebars';
 
 import { AnalyzedMetaData, MetaDataResult } from '../models/screenshot-result';
@@ -209,7 +209,9 @@ export class StyleGuideBuilder {
       const path = join(this.pathToSaveImage, template.fileName);
       await page.screenshot({ path: `${path}.png` });
 
-      const screenshot = await page.screenshot({ encoding: 'base64' });
+      const screenshot = (await page.screenshot({
+        encoding: 'base64',
+      })) as string;
       templateScreenshots.push({ id: template.id, screenshot });
     }
 

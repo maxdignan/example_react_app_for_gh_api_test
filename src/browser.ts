@@ -1,4 +1,6 @@
-import puppeteer, { LaunchOptions } from 'puppeteer';
+import puppeteer, { LaunchOptions } from 'puppeteer-core';
+import findChrome from 'chrome-finder';
+const download = require('download-chromium');
 
 import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
@@ -7,7 +9,7 @@ import {
   MetaDataResult,
   Result,
 } from './models/screenshot-result';
-import { exitWithError, allPropsForElement } from './util';
+import { exitWithError, allPropsForElement, isCI } from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
 import { StyleGuideBuilder } from './style-guide/style-guide-builder';
 import { StyleGuideParam } from './style-guide/style-guide-param';
@@ -15,7 +17,6 @@ import { AppArgs, getArgFor } from './models/args';
 import { Viewport } from './models/viewport';
 import { logger } from './logger';
 import * as fromPlugins from './plugins';
-import { Project } from './models/project';
 
 export class Browser {
   // Can be thought of as dpr of screenshot
@@ -40,12 +41,46 @@ export class Browser {
     return url!;
   }
 
+  static async getChromeExecutablePath(): Promise<string> {
+    let path: string;
+    if (isCI()) {
+      logger.debug('browser : downloading chrome...');
+      try {
+        path = await download();
+      } catch (err) {
+        exitWithError(err);
+      }
+    } else {
+      logger.debug('browser : finding chrome...');
+      try {
+        logger.time('browser : find chrome');
+        path = findChrome();
+      } catch (err) {
+        exitWithError('No Chrome installation found.');
+      }
+    }
+    logger.timeEnd('browser : find chrome');
+    return path!;
+  }
+
   private authorized = false;
-  private launchConfig: LaunchOptions = {
-    product: 'chrome', // Also firefox
-    headless: true,
-    slowMo: 0,
-  };
+  private launchConfig: LaunchOptions;
+
+  constructor() {
+    this.getLaunchConfig()
+      .then(config => (this.launchConfig = config))
+      .catch(err => exitWithError(err));
+  }
+
+  private async getLaunchConfig(): Promise<LaunchOptions> {
+    const executablePath = await Browser.getChromeExecutablePath();
+    logger.debug('browser : got path :', executablePath!);
+    const options: LaunchOptions = {
+      product: 'chrome', // Also firefox
+      executablePath,
+    };
+    return options;
+  }
 
   /**
    * Find input fields, send value and events, profit.
@@ -66,7 +101,7 @@ export class Browser {
           el.dispatchEvent(new Event('change', options));
           return el.value;
         },
-        config.login!.user,
+        config.login!.user!,
       );
       const password = await page.$eval(
         'input[type="password"]',
@@ -78,7 +113,7 @@ export class Browser {
           el.dispatchEvent(new Event('change', options));
           return el.value;
         },
-        config.login!.password,
+        config.login!.password!,
       );
       logger.info(`Signing in using ${email} and ${password}`);
       logger.debug('browser : login form filled :', email + ' / ' + password);
@@ -189,7 +224,7 @@ export class Browser {
       // Timeout before executing plugins in MS
       if (delay && !isNaN(delay)) {
         // logger.debug(`browser : delay for : ${delay} milliseconds`);
-        await page.waitFor(delay);
+        await page.waitForTimeout(delay);
       }
     }
 
@@ -215,7 +250,7 @@ export class Browser {
 
       // Brief pause before executing plugins
       // This appears to resolve plugin component cropping/dimension issues.
-      await page.waitFor(10);
+      await page.waitForTimeout(10);
 
       try {
         plugins = await this.runPlugins(page, {
@@ -246,6 +281,7 @@ export class Browser {
     projectViewports: ReadonlyArray<Viewport>,
   ): Promise<Result> {
     const browser = await puppeteer.launch(this.launchConfig);
+    logger.debug('browser : launched 🚀');
     const userAgent = await browser.userAgent();
 
     // Limit max amount of shots
@@ -294,7 +330,6 @@ export class Browser {
 
     // Go through every route and take a shot
     for (const route of routes) {
-      /** @todo: We should be closing this page. */
       // const reusedPage = page || (await browser.newPage());
       const page = await browser.newPage();
 

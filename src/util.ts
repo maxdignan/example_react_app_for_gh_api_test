@@ -1,5 +1,5 @@
 import http from 'http';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 
 import { AppArgs } from './models/args';
 
@@ -142,6 +142,9 @@ export const Example = () => {
   });
 };
 
+/**
+ * Did command provide `DEBUG=1` flag?
+ */
 export const isDebug = () => (process.env.DEBUG ? !!+process.env.DEBUG : false);
 
 /**
@@ -150,3 +153,8 @@ export const isDebug = () => (process.env.DEBUG ? !!+process.env.DEBUG : false);
 export const patchConsoleWarn = () => {
   Object.defineProperty(console, 'warn', { value: () => null });
 };
+
+/**
+ * Did command provide `CI=1` flag?
+ */
+export const isCI = () => (process.env.CI ? !!+process.env.CI : false);

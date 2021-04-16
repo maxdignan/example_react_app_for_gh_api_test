@@ -7,8 +7,16 @@ const purple = chalk.hex('#415de1');
 class Logger {
   constructor(private debugMode = isDebug()) {}
 
-  public debug(...obj: any) {
-    if (this.debugMode) log(obj);
+  public debug(...obj: unknown[]) {
+    if (this.debugMode) log(...obj);
+  }
+
+  public time(id: string) {
+    if (this.debugMode) console.time(id);
+  }
+
+  public timeEnd(id: string) {
+    if (this.debugMode) console.timeEnd(id);
   }
 
   public info(...obj: any) {

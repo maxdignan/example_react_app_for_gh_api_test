@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import { join } from 'path';
 
 import { exitWithError } from '../util';
@@ -25,7 +25,7 @@ export class PageScreenShotPlugin extends Plugin<PageScreenshotPluginResult> {
   async run(page: puppeteer.Page, options: PluginOptions) {
     const url = page.url();
     const extension = this.getExtension();
-    const viewport = page.viewport();
+    const viewport = page.viewport()!;
     // Use route, or if empty assume home page
     const urlNameForFile = options.routeId
       ? `${Route.getFileNameFromURL(url)}`
