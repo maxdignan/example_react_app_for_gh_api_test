@@ -39,6 +39,10 @@ class Logger {
     process.stdout.write(`${chalk.green.bold(obj)}\n`);
   }
 
+  public endActionWithError(...obj: any) {
+    process.stdout.write(`${chalk.redBright.bold(obj)}\n`);
+  }
+
   public dryRunWarning() {
     log(
       chalk.yellow.bold(
