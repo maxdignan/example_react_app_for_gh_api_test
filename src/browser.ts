@@ -75,7 +75,6 @@ export class Browser {
   private async getLaunchConfig(): Promise<LaunchOptions> {
     const executablePath = await Browser.getChromeExecutablePath();
     logger.debug('browser : got path :', executablePath!);
-    process.exit();
     const options: LaunchOptions = {
       product: 'chrome', // Also firefox
       executablePath,
