@@ -594,8 +594,10 @@ class App {
    * Output link to view project in web app.
    */
   private logLinkForRunThrough(projectId: number, runThroughId: number) {
-    logger.notice('Emtrey run through completed. To view the results visit:');
-    const url = `https://${HttpClient.apiURL}/projects/${projectId}/runs/${runThroughId}`;
+    logger.notice(
+      '\n  Emtrey run through completed. To view the results visit:',
+    );
+    const url = `  https://${HttpClient.apiURL}/projects/${projectId}/runs/${runThroughId}\n`;
     logger.notice(url);
   }
 }
