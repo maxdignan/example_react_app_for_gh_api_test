@@ -547,7 +547,11 @@ class App {
       let pageCapture: PageCapture;
 
       logger.startAction(
-        `Uploading capture(s) for ${pageCaptureParams.page_route}`,
+        `Uploading ${
+          pageCaptureParams.type
+        } capture (${result.viewport.name.toLowerCase()}) for ${
+          pageCaptureParams.page_route
+        }`,
       );
 
       try {
