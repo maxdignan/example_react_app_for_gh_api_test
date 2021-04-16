@@ -344,7 +344,7 @@ class App {
     const path = await this.prepareScreenshotDirectory(appDir);
 
     // Browse to routes and execute plugins
-    logger.info('Processing discovering routes...');
+    logger.info('Processing discovered routes...');
     const results = await new Browser().visitRoutes(
       routes,
       appURL,
@@ -421,14 +421,14 @@ class App {
    */
   private getGitInfo(): Promise<GitInfo | string> {
     return new Promise((resolve, reject) => {
-      console.time('git info');
+      // console.time('git info');
       exec(
         'git rev-parse --abbrev-ref HEAD && git rev-parse HEAD',
         {
           cwd: this.getAppDirectory(),
         },
         (err: Error, stdout: string, stderr: string) => {
-          console.timeEnd('git info');
+          // console.timeEnd('git info');
           if (err || stderr) {
             // Git may not be initialized, or no commit exists.
             reject(err.message || stderr);

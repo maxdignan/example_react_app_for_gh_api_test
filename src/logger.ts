@@ -11,6 +11,14 @@ class Logger {
     if (this.debugMode) log(...obj);
   }
 
+  public time(id: string) {
+    if (this.debugMode) console.time(id);
+  }
+
+  public timeEnd(id: string) {
+    if (this.debugMode) console.timeEnd(id);
+  }
+
   public info(...obj: any) {
     log(chalk.gray(obj));
   }

@@ -44,12 +44,15 @@ export class Browser {
    * Where is Chrome installed on users' system?
    */
   static getChromeExecutablePath(): string {
+    logger.debug('browser : finding chrome...');
     let path: string;
     try {
+      logger.time('browser : find chrome');
       path = findChrome();
     } catch (err) {
       exitWithError('No Chrome installation found.');
     }
+    logger.timeEnd('browser : find chrome');
     return path!;
   }
 
@@ -201,7 +204,7 @@ export class Browser {
       // Timeout before executing plugins in MS
       if (delay && !isNaN(delay)) {
         // logger.debug(`browser : delay for : ${delay} milliseconds`);
-        await page.waitFor(delay);
+        await page.waitForTimeout(delay);
       }
     }
 
@@ -227,7 +230,7 @@ export class Browser {
 
       // Brief pause before executing plugins
       // This appears to resolve plugin component cropping/dimension issues.
-      await page.waitFor(10);
+      await page.waitForTimeout(10);
 
       try {
         plugins = await this.runPlugins(page, {
@@ -258,6 +261,7 @@ export class Browser {
     projectViewports: ReadonlyArray<Viewport>,
   ): Promise<Result> {
     const browser = await puppeteer.launch(this.launchConfig);
+    logger.debug('browser : launched 🚀');
     const userAgent = await browser.userAgent();
 
     // Limit max amount of shots
@@ -306,7 +310,6 @@ export class Browser {
 
     // Go through every route and take a shot
     for (const route of routes) {
-      /** @todo: We should be closing this page. */
       // const reusedPage = page || (await browser.newPage());
       const page = await browser.newPage();
 
