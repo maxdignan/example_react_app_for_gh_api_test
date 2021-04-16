@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "chalk": "^4.1.0",
+    "chrome-finder": "^1.0.7",
+    "download-chromium": "^2.2.1",
     "glob": "^7.1.6",
     "handlebars": "^4.7.6",
     "prompts": "^2.4.1",
-    "puppeteer": "^5.2.1",
+    "puppeteer-core": "^8.0.0",
     "rimraf": "^3.0.2"
   }
 }

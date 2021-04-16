@@ -1,5 +1,6 @@
 import puppeteer, { LaunchOptions } from 'puppeteer-core';
 import findChrome from 'chrome-finder';
+const download = require('download-chromium');
 
 import { Route } from './models/route';
 import { ProjectConfig } from './models/project-config';
@@ -8,7 +9,7 @@ import {
   MetaDataResult,
   Result,
 } from './models/screenshot-result';
-import { exitWithError, allPropsForElement } from './util';
+import { exitWithError, allPropsForElement, isCI } from './util';
 import { Plugin, PluginOptions, PluginResult } from './models/plugin';
 import { StyleGuideBuilder } from './style-guide/style-guide-builder';
 import { StyleGuideParam } from './style-guide/style-guide-param';
@@ -40,27 +41,47 @@ export class Browser {
     return url!;
   }
 
-  /**
-   * Where is Chrome installed on users' system?
-   */
-  static getChromeExecutablePath(): string {
-    logger.debug('browser : finding chrome...');
+  static async getChromeExecutablePath(): Promise<string> {
     let path: string;
-    try {
-      logger.time('browser : find chrome');
-      path = findChrome();
-    } catch (err) {
-      exitWithError('No Chrome installation found.');
+    if (isCI()) {
+      logger.debug('browser : downloading chrome...');
+      try {
+        path = await download();
+      } catch (err) {
+        exitWithError(err);
+      }
+    } else {
+      logger.debug('browser : finding chrome...');
+      try {
+        logger.time('browser : find chrome');
+        path = findChrome();
+      } catch (err) {
+        exitWithError('No Chrome installation found.');
+      }
     }
     logger.timeEnd('browser : find chrome');
     return path!;
   }
 
   private authorized = false;
-  private launchConfig: LaunchOptions = {
-    product: 'chrome', // Also firefox
-    executablePath: Browser.getChromeExecutablePath(),
-  };
+  private launchConfig: LaunchOptions;
+
+  constructor() {
+    this.getLaunchConfig()
+      .then(config => (this.launchConfig = config))
+      .catch(err => exitWithError(err));
+  }
+
+  private async getLaunchConfig(): Promise<LaunchOptions> {
+    const executablePath = await Browser.getChromeExecutablePath();
+    logger.debug('browser : got path :', executablePath!);
+    process.exit();
+    const options: LaunchOptions = {
+      product: 'chrome', // Also firefox
+      executablePath,
+    };
+    return options;
+  }
 
   /**
    * Find input fields, send value and events, profit.
