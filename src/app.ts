@@ -546,10 +546,12 @@ class App {
 
       let pageCapture: PageCapture;
 
+      logger.startAction(
+        `Uploading capture(s) for ${pageCaptureParams.page_route}`,
+      );
+
       try {
-        logger.startAction(
-          `Uploading captures for ${pageCaptureParams.page_route}`,
-        );
+        logger.updateAction('...');
         pageCapture = await this.httpClient.postPageCapture(pageCaptureParams);
         logger.debug('app : results : submitted page capture :', pageCapture);
         const { data } = result.plugins.find(
@@ -568,21 +570,21 @@ class App {
           'app : results : started diff :',
           pageCapture.page_capture.s3_object_key,
         );
-        logger.endAction('done');
       } catch (err) {
+        logger.endActionWithError('failed');
         exitWithError(err);
       }
 
       try {
-        logger.startAction('Uploading found styles to Emtrey...');
         await this.httpClient.postStyleGuide(
           token.project.id,
           resultData.styleGuide,
         );
-        logger.endAction('done');
       } catch (err) {
         logger.warn('app : error submitting style guide :', err);
       }
+
+      logger.endAction('done');
     }
 
     this.logLinkForRunThrough(token.project.id, runThroughResult!.id);
