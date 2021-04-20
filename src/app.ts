@@ -126,7 +126,9 @@ class App {
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS(appDir);
 
-    if (!userToken) {
+    if (process.env.EMTREY_CICD_TOKEN) {
+      sessionToken = process.env.EMTREY_CICD_TOKEN;
+    } else if (!userToken) {
       logger.info('No auth found. Starting new session...');
       logger.debug('auth : no user token, creating one...');
       // User token is not cached on fs, create one...
@@ -146,7 +148,7 @@ class App {
 
       const hasOrganization = user.orgs.length > 0;
       const hasProjects = user.projects.length > 0;
-      const appName = await this.getAppName();
+      const appName = await this.getAppName(user.projects);
 
       // Need to create org and projects before we continue
       if (!hasOrganization && !hasProjects) {
@@ -283,25 +285,36 @@ class App {
     return process.cwd();
   }
 
-  private async getAppName(): Promise<string> {
+  private async getAppName(usersProjects: readonly Project[]): Promise<string> {
     return new Promise((resolve, reject) => {
       const arg = getArgFor(this.args, 'app');
-      if (arg) {
+      if (process.env.EMTREY_CICD_TOKEN) {
+        if (usersProjects.length === 1) {
+          resolve(usersProjects[0].name);
+        } else {
+          reject(
+            new Error(
+              'When running in CI/CD mode, the user should be the CI/CD user for the project.',
+            ),
+          );
+        }
+      } else if (arg) {
         resolve(arg);
+      } else {
+        const dir = this.getAppDirectory();
+        readFile(`${dir}/package.json`, { encoding: 'utf-8' }, (err, json) => {
+          if (err) {
+            reject(err);
+          }
+          let appName: string;
+          try {
+            appName = JSON.parse(json).name;
+          } catch (err) {
+            reject(err);
+          }
+          resolve(appName! || 'my_emtrey_project');
+        });
       }
-      const dir = this.getAppDirectory();
-      readFile(`${dir}/package.json`, { encoding: 'utf-8' }, (err, json) => {
-        if (err) {
-          reject(err);
-        }
-        let appName: string;
-        try {
-          appName = JSON.parse(json).name;
-        } catch (err) {
-          reject(err);
-        }
-        resolve(appName! || 'my_emtrey_project');
-      });
     });
   }
 
@@ -448,7 +461,10 @@ class App {
    */
   private async authorizeUser(sessionToken: string): Promise<User> {
     const url = `https://${HttpClient.apiURL}/api-login?api_session_token=${sessionToken}`;
-    openBrowserTo(url);
+    if (!process.env.EMTREY_CICD_TOKEN) {
+      logger.info('Session started. Redirecting to Emtrey login...');
+      openBrowserTo(url);
+    }
     return new Promise(resolve => {
       let authTries = 1;
       let user: User | null;
