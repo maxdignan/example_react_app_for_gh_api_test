@@ -52,6 +52,20 @@ class App {
   private projectConfig: ProjectConfig;
   private httpClient = new HttpClient();
 
+  private static async getBaseBranch(appDir: string): Promise<string> {
+    let baseBranch: string;
+    try {
+      const choice = await new BaseBranch(appDir).init();
+      if (!choice) {
+        throw new Error('Base branch choice cannot be empty.');
+      }
+      baseBranch = choice.branchName;
+    } catch (err) {
+      exitWithError(err);
+    }
+    return baseBranch!;
+  }
+
   constructor(private args: Partial<AppArgs>) {
     patchConsoleWarn();
     this.validateArgs(args);
@@ -127,7 +141,10 @@ class App {
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS(appDir);
 
-    const baseBranch = new BaseBranch(appDir);
+    const baseBranch = await App.getBaseBranch(appDir);
+    logger.debug('app : user selected base branch :', baseBranch);
+
+    process.exit();
 
     if (!userToken) {
       logger.info('No auth found. Starting new session...');
@@ -195,7 +212,7 @@ class App {
             exitWithError(`Error while creating new project ${appName}`);
           }
         } else {
-          project = userProject;
+          project = userProject!;
         }
 
         logger.info('Found existing project, linking now...');
