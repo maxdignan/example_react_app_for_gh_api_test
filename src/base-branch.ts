@@ -32,7 +32,7 @@ export class BaseBranch {
             .map(b => b.trim())
             .filter(b => !!b)
             .sort((a, b) => (BaseBranch.isRootBranch(a) ? -1 : 1));
-          logger.debug('base branch : got branches :', branches);
+          logger.debug(`base branch : found ${branches.length} branches`);
           const options: Choice[] = branches.map(b => ({
             title: b,
             value: b,

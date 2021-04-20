@@ -66,6 +66,23 @@ class App {
     return baseBranch!;
   }
 
+  /**
+   * Confirm app is online by hitting sample URL.
+   */
+  private static async confirmProjectIsRunning(
+    serverUrl: string,
+    route: Route,
+  ) {
+    const sampleRoute = route.getFullUrl(serverUrl);
+    try {
+      return await xhrGet(sampleRoute);
+    } catch (err) {
+      exitWithError(
+        `Check application connection, bad response from url: ${sampleRoute}`,
+      );
+    }
+  }
+
   constructor(private args: Partial<AppArgs>) {
     patchConsoleWarn();
     this.validateArgs(args);
@@ -101,20 +118,6 @@ class App {
   }
 
   /**
-   * Confirm app is online by hitting sample URL.
-   */
-  private async confirmProjectIsRunning(serverUrl: string, route: Route) {
-    const sampleRoute = route.getFullUrl(serverUrl);
-    try {
-      await xhrGet(sampleRoute);
-    } catch (err) {
-      exitWithError(
-        `Check application connection, bad response from url: ${sampleRoute}`,
-      );
-    }
-  }
-
-  /**
    * Sniff project framework, file extension, etc.
    */
   private async getParserConfig(): Promise<ParserConfig> {
@@ -143,8 +146,6 @@ class App {
 
     const baseBranch = await App.getBaseBranch(appDir);
     logger.debug('app : user selected base branch :', baseBranch);
-
-    process.exit();
 
     if (!userToken) {
       logger.info('No auth found. Starting new session...');
@@ -358,14 +359,15 @@ class App {
     const appURL = Browser.getAppURL(this.args);
 
     // Check user's project is running locally
-    await this.confirmProjectIsRunning(appURL, routes[0]);
+    await App.confirmProjectIsRunning(appURL, routes[0]);
 
     // Prepare fs if project has config
     const path = await this.prepareScreenshotDirectory(appDir);
 
     // Browse to routes and execute plugins
     logger.info('Processing discovered routes...');
-    const results = await new Browser().visitRoutes(
+    const browser = await new Browser().init();
+    const results = await browser.visitRoutes(
       routes,
       appURL,
       path,
