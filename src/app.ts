@@ -43,6 +43,7 @@ import {
   PageScreenshotPluginResult,
   PageTitlePlugin,
 } from './plugins';
+import { BaseBranch } from './base-branch';
 
 console.time('run');
 
@@ -125,6 +126,8 @@ class App {
 
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS(appDir);
+
+    const baseBranch = new BaseBranch(appDir);
 
     if (!userToken) {
       logger.info('No auth found. Starting new session...');

@@ -9,7 +9,8 @@
     "test": "jest --forceExit --coverage --verbose",
     "watch-test": "npm run test -- --watchAll",
     "build-ts": "tsc",
-    "build:watch": "tsc -w"
+    "build:watch": "tsc -w",
+    "bw": "npm run build:watch"
   },
   "dependencies": {
     "chalk": "^4.1.0",
