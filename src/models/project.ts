@@ -24,4 +24,5 @@ export interface CreateProjectAPIParams {
   name: string;
   github_url: string | null;
   org_id: number;
+  base_branch_name: string;
 }
