@@ -153,7 +153,7 @@ export class UserToken implements UserTokenInterface {
       logger.debug('user token : content :', inspect(token, true, 3));
     } catch (err) {
       // Assume error is ENOENT (no entity)
-      logger.debug('user token : error :', err);
+      logger.debug('user token : error : ENOENT');
     }
     return token;
   }

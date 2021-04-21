@@ -123,7 +123,7 @@ class App {
     const appDir = this.getAppDirectory();
 
     /** @example */
-    UserToken.deleteUserFromFS(appDir);
+    // UserToken.deleteUserFromFS(appDir);
 
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS(appDir);
@@ -243,7 +243,9 @@ class App {
         logger.info(
           'Invalid user token detected and removed. Please run the Emtrey command again.',
         );
-        UserToken.deleteUserFromFS(appDir);
+        try {
+          UserToken.deleteUserFromFS(appDir);
+        } catch (err) {}
         exitWithError('Invalid user token');
       }
 
