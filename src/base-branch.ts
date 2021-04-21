@@ -1,11 +1,10 @@
 import { exec } from 'child_process';
 import { Choice, prompt } from 'prompts';
+
 import { logger } from './logger';
 import { exitWithError } from './util';
 
 export class BaseBranch {
-  private branchOptions: Choice[] = [];
-
   /**
    * Find the main branch (used to just be master).
    */
