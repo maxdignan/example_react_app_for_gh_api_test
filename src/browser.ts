@@ -51,7 +51,7 @@ export class Browser {
         exitWithError(err);
       }
     } else {
-      logger.debug('browser : finding chrome...');
+      logger.debug('browser : not ci, finding chrome...');
       try {
         logger.time('browser : find chrome');
         path = findChrome();
@@ -66,19 +66,28 @@ export class Browser {
   private authorized = false;
   private launchConfig: LaunchOptions;
 
-  constructor() {
-    this.getLaunchConfig()
-      .then(config => (this.launchConfig = config))
-      .catch(err => exitWithError(err));
+  /**
+   * Initialize the puppeteer launch config, must be done before any other public API call.
+   */
+  public async init(): Promise<this> {
+    let config: puppeteer.LaunchOptions;
+    try {
+      config = await this.getLaunchConfig();
+      this.launchConfig = config;
+    } catch (err) {
+      exitWithError(err);
+    }
+    return this;
   }
 
   private async getLaunchConfig(): Promise<LaunchOptions> {
     const executablePath = await Browser.getChromeExecutablePath();
-    logger.debug('browser : got path :', executablePath!);
+    logger.info('Found local browser');
     const options: LaunchOptions = {
       product: 'chrome', // Also firefox
       executablePath,
     };
+    logger.debug('browser : launch options :', options);
     return options;
   }
 
@@ -280,9 +289,14 @@ export class Browser {
     config: ProjectConfig,
     projectViewports: ReadonlyArray<Viewport>,
   ): Promise<Result> {
-    const browser = await puppeteer.launch(this.launchConfig);
+    let browser: puppeteer.Browser;
+    try {
+      browser = await puppeteer.launch(this.launchConfig);
+    } catch (err) {
+      exitWithError(err);
+    }
     logger.debug('browser : launched 🚀');
-    const userAgent = await browser.userAgent();
+    const userAgent = await browser!.userAgent();
 
     // Limit max amount of shots
     if (config.limit) {
@@ -307,7 +321,7 @@ export class Browser {
       const loginRoute = routes.find(r => r.url === config.getLoginUrl());
       if (loginRoute) {
         // New page for login route.
-        page = await browser.newPage();
+        page = await browser!.newPage();
         // Go and snap login.
         const loginResult = await this.visitRoute({
           route: loginRoute,
@@ -331,7 +345,7 @@ export class Browser {
     // Go through every route and take a shot
     for (const route of routes) {
       // const reusedPage = page || (await browser.newPage());
-      const page = await browser.newPage();
+      const page = await browser!.newPage();
 
       if (route.url === config.getLoginUrl() && hasVisitedLogin) {
         // We already have login screen.
@@ -363,7 +377,7 @@ export class Browser {
     // Build style guide after all route visits.
     try {
       const sgb = new StyleGuideBuilder({ metaData, path });
-      const page = await browser.newPage();
+      const page = await browser!.newPage();
       const url = sgb.getURLToVisit(routes, serverUrl, config);
       await page.goto(url, { waitUntil: ['load'] });
       styleGuide = await sgb.buildStyleGuide(page);
@@ -372,7 +386,7 @@ export class Browser {
       console.error(err);
     }
 
-    await browser.close();
+    await browser!.close();
 
     const browserInfo = { userAgent };
     return { results, styleGuide, browserInfo };

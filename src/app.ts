@@ -37,6 +37,7 @@ import { PluginResult } from './models/plugin';
 import { Project } from './models/project';
 import { logger } from './logger';
 import { StyleGuideTemplateId } from './style-guide/style-guide-templates';
+import { BaseBranch } from './base-branch';
 import {
   ComponentScreenShotPlugin,
   PageScreenShotPlugin,
@@ -50,6 +51,38 @@ class App {
   static isDryRun = process.env.DRY_RUN ? !!+process.env.DRY_RUN : false;
   private projectConfig: ProjectConfig;
   private httpClient = new HttpClient();
+  private hasIdentifiedBaseBranchThisRun = false;
+
+  private static async getBaseBranch(appDir: string): Promise<string> {
+    let baseBranch: string;
+    try {
+      const choice = await new BaseBranch(appDir).init();
+      if (!choice) {
+        throw new Error('Base branch choice cannot be empty.');
+      }
+      baseBranch = choice.branchName;
+    } catch (err) {
+      exitWithError(err);
+    }
+    return baseBranch!;
+  }
+
+  /**
+   * Confirm app is online by hitting sample URL.
+   */
+  private static async confirmProjectIsRunning(
+    serverUrl: string,
+    route: Route,
+  ) {
+    const sampleRoute = route.getFullUrl(serverUrl);
+    try {
+      return await xhrGet(sampleRoute);
+    } catch (err) {
+      exitWithError(
+        `Check application connection, bad response from url: ${sampleRoute}`,
+      );
+    }
+  }
 
   constructor(private args: Partial<AppArgs>) {
     patchConsoleWarn();
@@ -86,20 +119,6 @@ class App {
   }
 
   /**
-   * Confirm app is online by hitting sample URL.
-   */
-  private async confirmProjectIsRunning(serverUrl: string, route: Route) {
-    const sampleRoute = route.getFullUrl(serverUrl);
-    try {
-      await xhrGet(sampleRoute);
-    } catch (err) {
-      exitWithError(
-        `Check application connection, bad response from url: ${sampleRoute}`,
-      );
-    }
-  }
-
-  /**
    * Sniff project framework, file extension, etc.
    */
   private async getParserConfig(): Promise<ParserConfig> {
@@ -117,11 +136,28 @@ class App {
   }
 
   /**
+   * Prompts user to select base branch before creating project.
+   */
+  private async createProject(data: {
+    appDir: string;
+    appName: string;
+    githubURL: string | null;
+    organizationId: number;
+  }): Promise<Project> {
+    const baseBranch = await this.initializeBaseBranch(data.appDir);
+    return await this.httpClient.createProject({
+      name: data.appName,
+      github_url: data.githubURL,
+      org_id: data.organizationId,
+      base_branch_name: baseBranch,
+    });
+  }
+
+  /**
    * Get user from cache or create new.
    */
-  private async initializeUserToken(): Promise<UserToken> {
+  private async initializeUserToken(appDir: string): Promise<UserToken> {
     // UserToken.deleteUserFromFS(appDir);
-    const appDir = this.getAppDirectory();
 
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS(appDir);
@@ -159,10 +195,11 @@ class App {
         });
         organizationId = organization.id;
         // Create users' first project
-        project = await this.httpClient.createProject({
-          name: appName,
-          github_url: null,
-          org_id: organizationId,
+        project = await this.createProject({
+          appDir,
+          appName,
+          githubURL: null,
+          organizationId,
         });
       } else if (
         (hasOrganization && hasProjects) ||
@@ -183,10 +220,11 @@ class App {
             organizationForProject = user.orgs[0];
           }
           try {
-            const newProject = await this.httpClient.createProject({
-              name: appName,
-              github_url: null,
-              org_id: organizationForProject!.id,
+            const newProject = await this.createProject({
+              appDir,
+              appName,
+              githubURL: null,
+              organizationId: organizationForProject!.id,
             });
             logger.info(`Created new Emtrey project "${appName}"`);
             project = newProject;
@@ -194,7 +232,7 @@ class App {
             exitWithError(`Error while creating new project ${appName}`);
           }
         } else {
-          project = userProject;
+          project = userProject!;
         }
 
         logger.info('Found existing project, linking now...');
@@ -318,16 +356,25 @@ class App {
     });
   }
 
+  private async initializeBaseBranch(appDir: string) {
+    const baseBranch = await App.getBaseBranch(appDir);
+    this.hasIdentifiedBaseBranchThisRun = true;
+    logger.debug('app : user selected base branch :', baseBranch);
+    return baseBranch;
+  }
+
   /**
    * Gather all routes and navigate to URLs to take screenshots.
    */
   public async run() {
+    const appDir = this.getAppDirectory();
+
     // Do all user stuff first
     let token: UserToken;
     try {
-      token = await this.initializeUserToken();
+      token = await this.initializeUserToken(appDir);
     } catch (err) {
-      exitWithError(`Failed to initialize user ${err}`);
+      return exitWithError(`Failed to initialize user ${err}`);
     }
 
     // Get parser config from user's project
@@ -339,8 +386,6 @@ class App {
       exitWithError(`Could not locate parser config, error: ${err}`);
     }
 
-    const appDir = this.getAppDirectory();
-
     // Get emtrey config from user's project
     const projectConfig = await this.readProjectConfig(appDir);
     this.setProjectConfig(projectConfig);
@@ -351,14 +396,15 @@ class App {
     const appURL = Browser.getAppURL(this.args);
 
     // Check user's project is running locally
-    await this.confirmProjectIsRunning(appURL, routes[0]);
+    await App.confirmProjectIsRunning(appURL, routes[0]);
 
     // Prepare fs if project has config
     const path = await this.prepareScreenshotDirectory(appDir);
 
     // Browse to routes and execute plugins
     logger.info('Processing discovered routes...');
-    const results = await new Browser().visitRoutes(
+    const browser = await new Browser().init();
+    const results = await browser.visitRoutes(
       routes,
       appURL,
       path,

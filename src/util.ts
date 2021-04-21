@@ -129,7 +129,6 @@ export const openBrowserTo = (url: string) => {
 /**
  * Example.
  */
-
 export const Example = () => {
   const readline = require('readline').createInterface({
     input: process.stdin,
