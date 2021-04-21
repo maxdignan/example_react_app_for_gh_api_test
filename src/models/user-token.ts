@@ -135,7 +135,7 @@ export class UserToken implements UserTokenInterface {
       return false;
     }
     logger.notice(
-      "Your project's .gitignore file has been modified to include Emtrey content, please commit this change.",
+      "Your project's .gitignore file was modified to exclude temporary files created by Emtrey. Please commit this change.",
     );
     return true;
   }
