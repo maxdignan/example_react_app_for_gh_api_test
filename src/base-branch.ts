@@ -14,9 +14,8 @@ export class BaseBranch {
 
   static getBranchOptions(cwd: string): Promise<Choice[]> {
     return new Promise((resolve, reject) => {
-      /** @todo: Do we need to parse locals as well? */
       exec(
-        'git branch -r',
+        'git branch -a',
         {
           cwd,
         },
