@@ -120,8 +120,10 @@ class App {
    * Get user from cache or create new.
    */
   private async initializeUserToken(): Promise<UserToken> {
-    // UserToken.deleteUserFromFS(appDir);
     const appDir = this.getAppDirectory();
+
+    /** @example */
+    UserToken.deleteUserFromFS(appDir);
 
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS(appDir);
@@ -198,7 +200,7 @@ class App {
         }
 
         logger.info('Found existing project, linking now...');
-        logger.debug('auth : using project :', project!);
+        // logger.debug('auth : using project :', project!);
         organizationId = project!.org_id;
       } else if (!hasOrganization && hasProjects) {
         // No organizations, but projects exist

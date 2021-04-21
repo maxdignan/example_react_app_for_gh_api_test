@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import fs from 'fs';
 import { join } from 'path';
 import { inspect } from 'util';
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
@@ -76,12 +76,11 @@ export class UserToken implements UserTokenInterface {
     return join(dir, UserToken.emtreyDir, 'token');
   }
 
-  static createEmtreyDirectory(dir: string) {}
   /**
    * Write user info to file system.
    */
   static async saveToFS(
-    dir: string,
+    appDir: string,
     user: User,
     sessionToken: string,
     project: Project,
@@ -96,19 +95,49 @@ export class UserToken implements UserTokenInterface {
     };
     logger.debug('user token : saving');
     try {
-      const emtreyDir = join(dir, UserToken.emtreyDir);
+      const emtreyDir = join(appDir, UserToken.emtreyDir);
       const exists = fs.existsSync(emtreyDir);
       // Need to create parent directory
       !exists && fs.mkdirSync(emtreyDir);
-      const fileName = UserToken.getJoinedFileName(dir);
+      const fileName = UserToken.getJoinedFileName(appDir);
       // Encrypt content
       const encrypted = UserToken.encrypt(JSON.stringify(token));
       const fileContent = JSON.stringify(encrypted);
       await fs.promises.writeFile(fileName, fileContent, 'utf-8');
+      await UserToken.tryPatchingGitIgnore(appDir);
     } catch (err) {
       exitWithError(err);
     }
     return token;
+  }
+
+  static async tryPatchingGitIgnore(appDir: string): Promise<boolean> {
+    logger.debug('user token : trying to patch .gitignore :', appDir);
+    const filePath = `${appDir}/.gitignore`;
+    let fileContent: string;
+    try {
+      fileContent = await fs.promises.readFile(filePath, 'utf-8');
+    } catch (err) {
+      logger.debug(err);
+      return false;
+    }
+    const hasIgnoredEmtreyDir = fileContent.includes(UserToken.emtreyDir);
+    if (hasIgnoredEmtreyDir) {
+      logger.debug('user token : emtrey content already ignored');
+      return true;
+    }
+    const newFileContent = `${fileContent}\n${UserToken.emtreyDir}`;
+    logger.debug('user token : writing emtrey content to .gitignore');
+    try {
+      await fs.promises.writeFile(filePath, newFileContent, 'utf-8');
+    } catch (err) {
+      logger.debug(err);
+      return false;
+    }
+    logger.notice(
+      "Your project's .gitignore file has been modified to include Emtrey content, please commit this change.",
+    );
+    return true;
   }
 
   /**
