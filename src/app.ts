@@ -157,6 +157,7 @@ class App {
    * Get user from cache or create new.
    */
   private async initializeUserToken(appDir: string): Promise<UserToken> {
+    /** @example */
     // UserToken.deleteUserFromFS(appDir);
 
     let sessionToken: string;
@@ -236,7 +237,7 @@ class App {
         }
 
         logger.info('Found existing project, linking now...');
-        logger.debug('auth : using project :', project!);
+        // logger.debug('auth : using project :', project!);
         organizationId = project!.org_id;
       } else if (!hasOrganization && hasProjects) {
         // No organizations, but projects exist
@@ -279,7 +280,9 @@ class App {
         logger.info(
           'Invalid user token detected and removed. Please run the Emtrey command again.',
         );
-        UserToken.deleteUserFromFS(appDir);
+        try {
+          UserToken.deleteUserFromFS(appDir);
+        } catch (err) {}
         exitWithError('Invalid user token');
       }
 
