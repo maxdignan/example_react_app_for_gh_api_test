@@ -246,8 +246,8 @@ class App {
             'Could not find matching project to derive organization',
           );
         }
-        organizationId = project!.org_id;
         project = userProject!;
+        organizationId = project!.org_id;
       } else {
         exitWithError('Could not find organization for user');
       }
@@ -654,6 +654,9 @@ class App {
 
       logger.endAction('done');
     }
+
+    logger.startAction('Wrapping things up...');
+    await this.httpClient.runThroughDone(runThroughResult!);
 
     this.logLinkForRunThrough(token.project.id, runThroughResult!.id);
 

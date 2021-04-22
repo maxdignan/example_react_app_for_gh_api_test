@@ -257,4 +257,11 @@ export class HttpClient {
     const params = { styles };
     return this.post(`api/styles/${projectId}`, params);
   }
+
+  public async runThroughDone(runThrough: RunThrough): Promise<void> {
+    const params = {
+      run_through_id: runThrough.id,
+    };
+    return this.post('api/run-through/done', params);
+  }
 }
