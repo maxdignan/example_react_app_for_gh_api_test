@@ -44,9 +44,10 @@ export class BaseBranch {
 
   constructor(private appDir: string) {}
 
-  public async init() {
+  public async init(): Promise<string> {
     return BaseBranch.getBranchOptions(this.appDir)
       .then(o => this.promptUserToSelectBaseBranch(o))
+      .then(o => o.branchName.replace('*', '').trim())
       .catch(err => exitWithError(err));
   }
 

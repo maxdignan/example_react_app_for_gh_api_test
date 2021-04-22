@@ -56,11 +56,10 @@ class App {
   private static async getBaseBranch(appDir: string): Promise<string> {
     let baseBranch: string;
     try {
-      const choice = await new BaseBranch(appDir).init();
-      if (!choice) {
+      baseBranch = await new BaseBranch(appDir).init();
+      if (!baseBranch) {
         throw new Error('Base branch choice cannot be empty.');
       }
-      baseBranch = choice.branchName;
     } catch (err) {
       exitWithError(err);
     }
