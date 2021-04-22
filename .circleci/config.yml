@@ -26,7 +26,7 @@ jobs:
 
       - run:
           name: start dev
-          command: npm run develop
+          command: node devServer.js
 
       - run:
           name: emtrey
