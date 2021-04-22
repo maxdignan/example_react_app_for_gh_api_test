@@ -24,6 +24,10 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
 
 
-      # - run:
-      #     name: jest
-      #     command: npm test
+      - run:
+          name: start dev
+          command: npm run develop
+
+      - run:
+          name: emtrey
+          command: npx emtrey --port=3000
