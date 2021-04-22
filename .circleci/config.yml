@@ -31,4 +31,4 @@ jobs:
 
       - run:
           name: emtrey
-          command: npx emtrey --port=3000
+          command: npx ./emtrey-0.6.0-cicd.tgz --port=3000
