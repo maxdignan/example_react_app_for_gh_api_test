@@ -11,6 +11,7 @@ jobs:
 
     steps:
       - checkout
+      - browser-tools/install-chrome
 
       # Download and cache dependencies
       - restore_cache:
