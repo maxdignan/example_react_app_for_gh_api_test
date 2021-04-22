@@ -4,7 +4,7 @@ class Project extends React.Component {
   render() {
     return(
       <div className="project">
-        <h1>Project!</h1>
+        <h1>Projectt!</h1>
         <p>{this.props.params.projectId}</p>
       </div>
     );
