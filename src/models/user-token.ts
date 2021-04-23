@@ -93,20 +93,22 @@ export class UserToken implements UserTokenInterface {
       project,
       organizationId,
     };
-    logger.debug('user token : saving');
-    try {
-      const emtreyDir = join(appDir, UserToken.emtreyDir);
-      const exists = fs.existsSync(emtreyDir);
-      // Need to create parent directory
-      !exists && fs.mkdirSync(emtreyDir);
-      const fileName = UserToken.getJoinedFileName(appDir);
-      // Encrypt content
-      const encrypted = UserToken.encrypt(JSON.stringify(token));
-      const fileContent = JSON.stringify(encrypted);
-      await fs.promises.writeFile(fileName, fileContent, 'utf-8');
-      await UserToken.tryPatchingGitIgnore(appDir);
-    } catch (err) {
-      exitWithError(err);
+    if (!process.env.EMTREY_CICD_TOKEN) {
+      logger.debug('user token : saving');
+      try {
+        const emtreyDir = join(appDir, UserToken.emtreyDir);
+        const exists = fs.existsSync(emtreyDir);
+        // Need to create parent directory
+        !exists && fs.mkdirSync(emtreyDir);
+        const fileName = UserToken.getJoinedFileName(appDir);
+        // Encrypt content
+        const encrypted = UserToken.encrypt(JSON.stringify(token));
+        const fileContent = JSON.stringify(encrypted);
+        await fs.promises.writeFile(fileName, fileContent, 'utf-8');
+        await UserToken.tryPatchingGitIgnore(appDir);
+      } catch (err) {
+        exitWithError(err);
+      }
     }
     return token;
   }
