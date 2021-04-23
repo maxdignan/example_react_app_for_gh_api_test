@@ -162,15 +162,17 @@ class App {
     let sessionToken: string;
     let userToken = await UserToken.readUserFromFS(appDir);
 
-    if (process.env.EMTREY_CICD_TOKEN) {
-      sessionToken = process.env.EMTREY_CICD_TOKEN;
-    } else if (!userToken) {
-      logger.info('No auth found. Starting new session...');
-      logger.debug('auth : no user token, creating one...');
-      // User token is not cached on fs, create one...
-      sessionToken = await this.httpClient.generateSessionToken();
-      logger.info('Session started. Redirecting to Emtrey login...');
-      logger.debug('auth : got session token :', sessionToken);
+    if (!userToken) {
+      if (process.env.EMTREY_CICD_TOKEN) {
+        sessionToken = process.env.EMTREY_CICD_TOKEN;
+      } else {
+        logger.info('No auth found. Starting new session...');
+        logger.debug('auth : no user token, creating one...');
+        // User token is not cached on fs, create one...
+        sessionToken = await this.httpClient.generateSessionToken();
+        logger.info('Session started. Redirecting to Emtrey login...');
+        logger.debug('auth : got session token :', sessionToken);
+      }
 
       // Cache token for API interaction
       this.httpClient.setToken(sessionToken);
