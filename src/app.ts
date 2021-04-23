@@ -440,7 +440,7 @@ class App {
       if (!existsSync(path)) {
         logger.debug('app : creating screenshot directory :', path);
         try {
-          mkdirSync(path);
+          mkdirSync(path, { recursive: true });
         } catch (err) {
           reject(err);
         }
