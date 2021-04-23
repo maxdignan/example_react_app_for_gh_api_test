@@ -35,4 +35,4 @@ jobs:
 
       - run:
           name: emtrey
-          command: API_URL=app-dev.emtrey.io npx ./testing-cicd-max-emtrey-0.0.4.tgz --port=3000
+          command: npx emtrey --port=3000
