@@ -14,7 +14,7 @@ ReactDOM.render(
       <IndexRoute component={Welcome} />
       <Route path="/projects" component={Projects} />
       <Route path="/project/:projectId" component={Project} />
-      <Route path="/about" component={About} />
+      <Route path="/about-us" component={About} />
       <Route path="*" component={PageNotFound} />
     </Route>
   </Router>,
